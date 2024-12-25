@@ -1,10 +1,19 @@
 import asyncio
 import os
-import time
 from concurrent.futures import ProcessPoolExecutor
 
-import joblib
-from sklearn.linear_model import LinearRegression, LogisticRegression
+import unicodedata
+import spacy
+import nltk
+nltk.download('stopwords')
+
+import cloudpickle
+
+from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.base import clone, TransformerMixin, BaseEstimator
+from sklearn.pipeline import Pipeline
 
 from exceptions import (
     ModelIDAlreadyExistsError,
@@ -21,10 +30,61 @@ from serializers.trainer import (
     PredictRequest,
     ModelListResponse,
     MLModelType,
+    VectorizerType,
     PredictResponse
 )
 from settings.app_config import AppConfig, active_processes
 
+available_models = {MLModelType.LogisticRegression: LogisticRegression(), 
+                    MLModelType.MultinomialNB: MultinomialNB()}
+
+class FunctionWrapper:
+    # https://stackoverflow.com/a/75720040
+
+    def __init__(self, fn):
+        self.fn_ser = cloudpickle.dumps(fn)
+
+    def __call__(self, *args, **kwargs):
+        fn = cloudpickle.loads(self.fn_ser)
+        return fn(*args, **kwargs)
+
+default_vec_params = {
+    'tokenizer': FunctionWrapper(lambda x: x.split('\t')),
+    'strip_accents': None,
+    'lowercase': False,
+    'preprocessor': None,
+    'stop_words': None,
+    'token_pattern': None
+}
+
+available_vectorizers = {VectorizerType.CountVectorizer: CountVectorizer(**default_vec_params), 
+                         VectorizerType.TfidfVectorizer: TfidfVectorizer(**default_vec_params)}
+
+class CustomTokenizer(BaseEstimator, TransformerMixin):
+    nlp = spacy.load('en_core_web_sm')
+    stopwords = set(nltk.corpus.stopwords.words('english'))
+
+    def __init__(self, batch_size=64, sep='\t'):
+        self.batch_size = batch_size
+        self.sep = sep
+
+    @staticmethod
+    def normalize_text(doc):
+        return unicodedata.normalize('NFKD', doc).encode('ascii', 'ignore').decode('utf-8', 'ignore')
+    
+    def fit(self, X, y=None):
+        return self
+    
+    def transform(self, X):
+        results = []
+
+        corpus_normalized = [self.normalize_text(doc) for doc in X]
+        pipe = self.nlp.pipe(corpus_normalized, disable=['ner', 'parser'], batch_size=self.batch_size)
+
+        for doc in pipe:
+            results.append(self.sep.join([token.lemma_.lower() for token in doc if not (token.lemma_.lower() in self.stopwords or token.is_space or token.is_punct)]))
+
+        return results
 
 class TrainerService:
     def __init__(
@@ -80,9 +140,10 @@ class TrainerService:
                 active_processes.value -= 1
 
                 model_file_path = (
-                    self.app_config.models_dir_path / f"{model_id}.pkl"
+                    self.app_config.models_dir_path / f"{model_id}.cloudpickle"
                 )
-                joblib.dump(model, model_file_path)
+                with model_file_path.open('wb') as f:
+                    cloudpickle.dump(model, f)
 
                 self.models[model_id] = {
                     "type": model_type,
@@ -108,27 +169,29 @@ class TrainerService:
     def _train_model(self, data: FitRequest):
         config = data.config
         model_type = config.ml_model_type
+        vec_type = config.vectorizer_type
         try:
-            if model_type == MLModelType.linear_regression:
-                model = LinearRegression(**config.hyperparameters)
-            else:
-                model = LogisticRegression(**config.hyperparameters)
-            model.fit(data.X, data.y)
+            estimator = clone(available_models[model_type]).set_params(**config.ml_model_params)
+            vec = clone(available_vectorizers[vec_type]).set_params(**config.vectorizer_params)
+            pipe = Pipeline(steps=[('preproc', CustomTokenizer()), 
+                                   ('vec', vec), 
+                                   ('estimator', estimator)])
+            pipe.fit(data.X, data.y)
+            print(pipe['vec'].get_params())
         except ValueError as e:
             raise InvalidFitPredictDataError(e.args[0])
 
-        time.sleep(60)
-        return model
+        return pipe
 
     async def load_model(self, model_id: str) -> list[MessageResponse]:
         if len(self.loaded_models) == self.app_config.models_max_cnt:
             raise ModelsLimitExceededError()
         if model_id not in self.models:
             raise ModelNotFoundError(model_id)
+        
+        with self.models[model_id].get("saved_model_file_path").open('rb') as f:
+            self.loaded_models[model_id] = cloudpickle.load(f)
 
-        self.loaded_models[model_id] = (
-            joblib.load(self.models[model_id].get("saved_model_file_path"))
-        )
         return [MessageResponse(message=f"Model '{model_id}' loaded.")]
 
     async def get_status(self) -> list[GetStatusResponse]:

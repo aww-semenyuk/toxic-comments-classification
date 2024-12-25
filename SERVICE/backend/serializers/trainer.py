@@ -1,49 +1,58 @@
 from enum import Enum
-
 from pydantic import BaseModel
-
 
 class MessageResponse(BaseModel):
     message: str
 
-
 class ModelListResponse(BaseModel):
     models: list[dict]
 
-
 class MLModelType(str, Enum):
-    linear_regression = "linear"
-    logistic_regression = "logistic"
+    LogisticRegression = "logistic_regression"
+    MultinomialNB = "multinomial_naive_bayes"
 
+class VectorizerType(str, Enum):
+    CountVectorizer = "bag_of_words"
+    TfidfVectorizer = "tf_idf"
 
 class FitConfig(BaseModel):
     id: str
-    ml_model_type: MLModelType
-    hyperparameters: dict
-
+    ml_model_type: MLModelType = MLModelType.LogisticRegression
+    ml_model_params: dict = {}
+    vectorizer_type: VectorizerType = VectorizerType.CountVectorizer
+    vectorizer_params: dict = {}
 
 class FitRequest(BaseModel):
-    X: list[list[float]]
-    y: list[float]
+    X: list[str]
+    y: list[int]
     config: FitConfig
 
+    model_config = {
+        "json_schema_extra": {"example": {"X": ["text text 1", "text text 2"],
+                                          "y": [0, 1],
+                                          "config": {"id": "model_1",
+                                                     "ml_model_type": "logistic_regression",
+                                                     "ml_model_params": {"C": 0.01},
+                                                     "vectorizer_type": "bag_of_words",
+                                                     "vectorizer_params": {"max_features": 10000}}}}}
 
 class LoadRequest(BaseModel):
     id: str
 
+    model_config = {"json_schema_extra": {"example": {"id": "model_1"}}}
 
 class GetStatusResponse(BaseModel):
     status: str
 
-
 class UnloadRequest(LoadRequest):
     pass
 
-
 class PredictRequest(BaseModel):
     id: str
-    X: list[list[float]]
+    X: list[str]
 
+    model_config = {"json_schema_extra": {"example": {"id": "model_1", 
+                                                      "X": ["text text 1", "text text 2"]}}}
 
 class PredictResponse(BaseModel):
-    predictions: list[float]
+    predictions: list[int]
