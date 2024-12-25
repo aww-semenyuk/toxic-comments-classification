@@ -5,7 +5,6 @@ class ModelNotFoundError(Exception):
         )
         super().__init__(self.detail)
 
-
 class ModelIDAlreadyExistsError(Exception):
     def __init__(self, model_id: str):
         self.detail = f"Модель '{model_id}' уже существует."
@@ -17,16 +16,13 @@ class ModelNotTrainedError(Exception):
         self.detail = f"Модель '{model_id}' еще не обучилась."
         super().__init__(self.detail)
 
-
 class ModelNotLoadedError(Exception):
     def __init__(self, model_id: str):
         self.detail = f"Модель '{model_id}' не загружена в память."
         super().__init__(self.detail)
 
-
 class ModelsLimitExceededError(Exception):
     detail = "Превышен лимит моделей для инференса."
-
 
 class InvalidFitPredictDataError(Exception):
     def __init__(self, message: str):

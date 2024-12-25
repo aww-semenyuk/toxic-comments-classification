@@ -3,9 +3,18 @@ import datetime as dt
 import os
 from uuid import UUID
 
-import joblib
-import pandas as pd
-from fastapi import BackgroundTasks
+import unicodedata
+import spacy
+import nltk
+nltk.download('stopwords')
+
+import cloudpickle
+
+from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.base import clone, TransformerMixin, BaseEstimator
+from sklearn.pipeline import Pipeline
 
 from background_tasks import train_and_save_model_task, prepare_predict_data
 from exceptions import (
@@ -24,6 +33,11 @@ from serializers.trainer import (
     PredictResponse,
     MLModel,
     MLModelConfig
+    PredictRequest,
+    ModelListResponse,
+    MLModelType,
+    VectorizerType,
+    PredictResponse
 )
 from services.background_tasks import BGTasksService
 from settings.app_config import (
@@ -32,6 +46,56 @@ from settings.app_config import (
     DEFAULT_MODEL_NAMES
 )
 
+available_models = {MLModelType.LogisticRegression: LogisticRegression(),
+                    MLModelType.MultinomialNB: MultinomialNB()}
+
+class FunctionWrapper:
+    # https://stackoverflow.com/a/75720040
+
+    def __init__(self, fn):
+        self.fn_ser = cloudpickle.dumps(fn)
+
+    def __call__(self, *args, **kwargs):
+        fn = cloudpickle.loads(self.fn_ser)
+        return fn(*args, **kwargs)
+
+default_vec_params = {
+    'tokenizer': FunctionWrapper(lambda x: x.split('\t')),
+    'strip_accents': None,
+    'lowercase': False,
+    'preprocessor': None,
+    'stop_words': None,
+    'token_pattern': None
+}
+
+available_vectorizers = {VectorizerType.CountVectorizer: CountVectorizer(**default_vec_params),
+                         VectorizerType.TfidfVectorizer: TfidfVectorizer(**default_vec_params)}
+
+class CustomTokenizer(BaseEstimator, TransformerMixin):
+    nlp = spacy.load('en_core_web_sm')
+    stopwords = set(nltk.corpus.stopwords.words('english'))
+
+    def __init__(self, batch_size=64, sep='\t'):
+        self.batch_size = batch_size
+        self.sep = sep
+
+    @staticmethod
+    def normalize_text(doc):
+        return unicodedata.normalize('NFKD', doc).encode('ascii', 'ignore').decode('utf-8', 'ignore')
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        results = []
+
+        corpus_normalized = [self.normalize_text(doc) for doc in X]
+        pipe = self.nlp.pipe(corpus_normalized, disable=['ner', 'parser'], batch_size=self.batch_size)
+
+        for doc in pipe:
+            results.append(self.sep.join([token.lemma_.lower() for token in doc if not (token.lemma_.lower() in self.stopwords or token.is_space or token.is_punct)]))
+
+        return results
 
 class TrainerService:
     def __init__(
