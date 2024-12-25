@@ -1,4 +1,5 @@
 from enum import Enum
+from pathlib import Path
 
 from pydantic import BaseModel
 
@@ -16,16 +17,10 @@ class MLModelType(str, Enum):
     logistic_regression = "logistic"
 
 
-class FitConfig(BaseModel):
+class MLModelConfig(BaseModel):
     id: str
     ml_model_type: MLModelType
     hyperparameters: dict
-
-
-class FitRequest(BaseModel):
-    X: list[list[float]]
-    y: list[float]
-    config: FitConfig
 
 
 class LoadRequest(BaseModel):
@@ -46,4 +41,14 @@ class PredictRequest(BaseModel):
 
 
 class PredictResponse(BaseModel):
-    predictions: list[float]
+    predictions: list
+
+
+class MLModelInListResponse(BaseModel):
+    id: str
+    type: MLModelType
+    is_trained: bool = False
+
+
+class MLModel(MLModelInListResponse):
+    saved_model_file_path: Path | None = None

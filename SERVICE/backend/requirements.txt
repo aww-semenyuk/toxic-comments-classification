@@ -3,3 +3,5 @@ pydanti~=2.10.4
 pydantic-settings~=2.7.0
 uvicorn~=0.34.0
 scikit-learn~=1.6.0
+pandas~=2.2.3
+python-multipart~=0.0.20

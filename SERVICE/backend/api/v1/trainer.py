@@ -1,10 +1,12 @@
+import json
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
 from http import HTTPStatus
 
 from starlette import status
 
+from api.utils import extract_dataset_from_zip_file
 from dependency import get_trainer_service
 from exceptions import (
     ModelIDAlreadyExistsError,
@@ -12,17 +14,19 @@ from exceptions import (
     ModelNotLoadedError,
     ModelsLimitExceededError,
     InvalidFitPredictDataError,
-    ActiveProcessesLimitExceededError
+    ActiveProcessesLimitExceededError,
+    DefaultModelRemoveUnloadError,
+    ModelNotTrainedError
 )
 from serializers.trainer import (
-    FitRequest,
+    MLModelConfig,
     LoadRequest,
     GetStatusResponse,
     MessageResponse,
     UnloadRequest,
-    PredictRequest,
     PredictResponse,
-    ModelListResponse
+    MLModelType,
+    MLModelInListResponse
 )
 from services.trainer import TrainerService
 
@@ -32,14 +36,34 @@ router = APIRouter()
 @router.post(
     "/fit",
     status_code=HTTPStatus.OK,
-    response_model=list[MessageResponse]
+    response_model=MessageResponse
 )
 async def fit(
-    request: list[FitRequest],
+    id: Annotated[str, Form()],
+    ml_model_type: Annotated[MLModelType, Form()],
+    hyperparameters: Annotated[str, Form(description="Валидная JSON-строка")],
+    fit_file: Annotated[UploadFile, File()],
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
 ):
+    dataset = extract_dataset_from_zip_file(fit_file)
+
     try:
-        return await trainer_service.fit_models(request)
+        parsed_hyperparameters = json.loads(hyperparameters)
+    except json.decoder.JSONDecodeError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Поле 'hyperparameters' должно быть валидной JSON-строкой."
+        )
+
+    try:
+        return await trainer_service.fit_models(
+            MLModelConfig(
+                id=id,
+                ml_model_type=ml_model_type,
+                hyperparameters=parsed_hyperparameters
+            ),
+            dataset
+        )
     except (
         ModelIDAlreadyExistsError,
         InvalidFitPredictDataError,
@@ -63,7 +87,7 @@ async def load(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=e.detail
         )
-    except ModelsLimitExceededError as e:
+    except (ModelNotTrainedError, ModelsLimitExceededError) as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=e.detail
@@ -89,15 +113,22 @@ async def unload(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=e.detail
         )
+    except (ModelNotLoadedError, DefaultModelRemoveUnloadError) as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=e.detail
+        )
 
 
-@router.post("/predict", response_model=list[PredictResponse])
+@router.post("/predict", response_model=PredictResponse)
 async def predict(
-    request: list[PredictRequest],
+    id: Annotated[str, Form()],
+    predict_file: Annotated[UploadFile, File()],
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
 ):
+    dataset = extract_dataset_from_zip_file(predict_file)
     try:
-        return await trainer_service.predict(request)
+        return await trainer_service.predict(id, dataset)
     except ModelNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -110,7 +141,7 @@ async def predict(
         )
 
 
-@router.get("/list_models", response_model=list[ModelListResponse])
+@router.get("/list_models", response_model=list[MLModelInListResponse])
 async def list_models(
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
 ):
@@ -127,6 +158,11 @@ async def remove(
     except ModelNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
+            detail=e.detail
+        )
+    except DefaultModelRemoveUnloadError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=e.detail
         )
 
