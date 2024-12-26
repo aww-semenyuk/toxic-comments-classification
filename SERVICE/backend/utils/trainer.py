@@ -72,7 +72,7 @@ class SpacyTokenizer(BaseEstimator, TransformerMixin):
 
         return results
 
-def make_pipeline(config: FitConfig):
+def make_pipeline_from_config(config: FitConfig):
     estimator = clone(AVAILABLE_ESTIMATORS[config.ml_model_type]).set_params(**config.ml_model_params)
     vec = clone(AVAILABLE_VECTORIZERS[config.vectorizer_type]).set_params(**config.vectorizer_params)
 

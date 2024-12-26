@@ -19,7 +19,7 @@ from serializers.trainer import (
     ModelListResponse,
     PredictResponse,
 )
-from utils.trainer import make_pipeline
+from utils.trainer import make_pipeline_from_config
 from settings.app_config import AppConfig, active_processes
 
 
@@ -105,7 +105,7 @@ class TrainerService:
 
     def _train_model(self, data: FitRequest):
         try:
-            pipe = make_pipeline(data.config)
+            pipe = make_pipeline_from_config(data.config)
             pipe.fit(data.X, data.y)
         except ValueError as e:
             raise InvalidFitPredictDataError(e.args[0])
