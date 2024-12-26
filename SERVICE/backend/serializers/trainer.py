@@ -2,6 +2,7 @@ from enum import Enum
 from pathlib import Path
 
 from pydantic import BaseModel
+from typing import Literal
 
 class MessageResponse(BaseModel):
     message: str
@@ -12,6 +13,7 @@ class ModelListResponse(BaseModel):
 class MLModelType(str, Enum):
     LogisticRegression = "logistic_regression"
     MultinomialNB = "multinomial_naive_bayes"
+    LinearSVC = "linear_svc"
 
 class VectorizerType(str, Enum):
     CountVectorizer = "bag_of_words"
@@ -19,10 +21,11 @@ class VectorizerType(str, Enum):
 
 class MLModelConfig(BaseModel):
     id: str
-    ml_model_type: MLModelType = MLModelType.LogisticRegression
-    ml_model_params: dict = {}
+    custom_tokenizer: Literal["spacy_lemma", None] = "spacy_lemma"
     vectorizer_type: VectorizerType = VectorizerType.CountVectorizer
     vectorizer_params: dict = {}
+    ml_model_type: MLModelType = MLModelType.LogisticRegression
+    ml_model_params: dict = {}
 
 class LoadRequest(BaseModel):
     id: str
@@ -39,8 +42,10 @@ class PredictRequest(BaseModel):
     id: str
     X: list[str]
 
-    model_config = {"json_schema_extra": {"example": {"id": "model_1",
-                                                      "X": ["text text 1", "text text 2"]}}}
+    model_config = {
+        "json_schema_extra": {"example": {
+            "id": "model_1",
+            "X": ["text text 1", "text text 2"]}}}
 
 class PredictResponse(BaseModel):
     predictions: list

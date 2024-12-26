@@ -9,12 +9,7 @@ import nltk
 nltk.download('stopwords')
 
 import cloudpickle
-
-from sklearn.linear_model import LogisticRegression
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-from sklearn.base import clone, TransformerMixin, BaseEstimator
-from sklearn.pipeline import Pipeline
+from concurrent.futures import ProcessPoolExecutor
 
 from background_tasks import train_and_save_model_task, prepare_predict_data
 from exceptions import (
@@ -35,9 +30,7 @@ from serializers.trainer import (
     MLModelConfig
     PredictRequest,
     ModelListResponse,
-    MLModelType,
-    VectorizerType,
-    PredictResponse
+    PredictResponse,
 )
 from services.background_tasks import BGTasksService
 from settings.app_config import (
