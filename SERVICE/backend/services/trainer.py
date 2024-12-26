@@ -1,19 +1,7 @@
 import asyncio
 import os
-from concurrent.futures import ProcessPoolExecutor
-
-import unicodedata
-import spacy
-import nltk
-nltk.download('stopwords')
-
 import cloudpickle
-
-from sklearn.linear_model import LogisticRegression
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-from sklearn.base import clone, TransformerMixin, BaseEstimator
-from sklearn.pipeline import Pipeline
+from concurrent.futures import ProcessPoolExecutor
 
 from exceptions import (
     ModelIDAlreadyExistsError,
@@ -29,62 +17,11 @@ from serializers.trainer import (
     GetStatusResponse,
     PredictRequest,
     ModelListResponse,
-    MLModelType,
-    VectorizerType,
-    PredictResponse
+    PredictResponse,
 )
+from utils.trainer import make_pipeline
 from settings.app_config import AppConfig, active_processes
 
-available_models = {MLModelType.LogisticRegression: LogisticRegression(), 
-                    MLModelType.MultinomialNB: MultinomialNB()}
-
-class FunctionWrapper:
-    # https://stackoverflow.com/a/75720040
-
-    def __init__(self, fn):
-        self.fn_ser = cloudpickle.dumps(fn)
-
-    def __call__(self, *args, **kwargs):
-        fn = cloudpickle.loads(self.fn_ser)
-        return fn(*args, **kwargs)
-
-default_vec_params = {
-    'tokenizer': FunctionWrapper(lambda x: x.split('\t')),
-    'strip_accents': None,
-    'lowercase': False,
-    'preprocessor': None,
-    'stop_words': None,
-    'token_pattern': None
-}
-
-available_vectorizers = {VectorizerType.CountVectorizer: CountVectorizer(**default_vec_params), 
-                         VectorizerType.TfidfVectorizer: TfidfVectorizer(**default_vec_params)}
-
-class CustomTokenizer(BaseEstimator, TransformerMixin):
-    nlp = spacy.load('en_core_web_sm')
-    stopwords = set(nltk.corpus.stopwords.words('english'))
-
-    def __init__(self, batch_size=64, sep='\t'):
-        self.batch_size = batch_size
-        self.sep = sep
-
-    @staticmethod
-    def normalize_text(doc):
-        return unicodedata.normalize('NFKD', doc).encode('ascii', 'ignore').decode('utf-8', 'ignore')
-    
-    def fit(self, X, y=None):
-        return self
-    
-    def transform(self, X):
-        results = []
-
-        corpus_normalized = [self.normalize_text(doc) for doc in X]
-        pipe = self.nlp.pipe(corpus_normalized, disable=['ner', 'parser'], batch_size=self.batch_size)
-
-        for doc in pipe:
-            results.append(self.sep.join([token.lemma_.lower() for token in doc if not (token.lemma_.lower() in self.stopwords or token.is_space or token.is_punct)]))
-
-        return results
 
 class TrainerService:
     def __init__(
@@ -167,17 +104,9 @@ class TrainerService:
         return response_list
 
     def _train_model(self, data: FitRequest):
-        config = data.config
-        model_type = config.ml_model_type
-        vec_type = config.vectorizer_type
         try:
-            estimator = clone(available_models[model_type]).set_params(**config.ml_model_params)
-            vec = clone(available_vectorizers[vec_type]).set_params(**config.vectorizer_params)
-            pipe = Pipeline(steps=[('preproc', CustomTokenizer()), 
-                                   ('vec', vec), 
-                                   ('estimator', estimator)])
+            pipe = make_pipeline(data.config)
             pipe.fit(data.X, data.y)
-            print(pipe['vec'].get_params())
         except ValueError as e:
             raise InvalidFitPredictDataError(e.args[0])
 

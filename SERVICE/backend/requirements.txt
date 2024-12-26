@@ -8,3 +8,4 @@ nltk==3.9.1
 cloudpickle==3.1.0
 
 # python -m spacy download en_core_web_sm
+# python -m nltk.downloader stopwords
