@@ -3,11 +3,11 @@ import datetime as dt
 import os
 from uuid import UUID
 
-import joblib
+import cloudpickle
 import pandas as pd
 from fastapi import BackgroundTasks
 
-from background_tasks import train_and_save_model_task, prepare_predict_data
+from background_tasks import prepare_predict_data
 from exceptions import (
     ModelIDAlreadyExistsError,
     ModelNotFoundError,
@@ -31,6 +31,7 @@ from settings.app_config import (
     active_processes,
     DEFAULT_MODEL_NAMES
 )
+from utils.trainer import train_and_save_model_task
 
 
 class TrainerService:
@@ -131,9 +132,9 @@ class TrainerService:
         if not self.models[model_id].is_trained:
             raise ModelNotTrainedError(model_id)
 
-        self.loaded_models[model_id] = (
-            joblib.load(self.models[model_id].saved_model_file_path)
-        )
+        with self.models[model_id].saved_model_file_path.open('rb') as f:
+            self.loaded_models[model_id] = cloudpickle.load(f)
+
         return [MessageResponse(
             message=f"Модель '{model_id}' загружена в память."
         )]
