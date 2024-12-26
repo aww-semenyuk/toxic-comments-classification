@@ -50,9 +50,10 @@ class SpacyTokenizer(BaseEstimator, TransformerMixin):
     nlp = spacy.load('en_core_web_sm')
     stopwords = set(nltk.corpus.stopwords.words('english'))
 
-    def __init__(self, batch_size=64, sep='\t'):
-        self.batch_size = batch_size
+    def __init__(self, sep='\t', n_process=1, batch_size=64):
         self.sep = sep
+        self.n_process = n_process
+        self.batch_size = batch_size
 
     @staticmethod
     def normalize_text(doc):
@@ -64,8 +65,7 @@ class SpacyTokenizer(BaseEstimator, TransformerMixin):
     def transform(self, X):
         results = []
 
-        corpus_normalized = [self.normalize_text(doc) for doc in X]
-        pipe = self.nlp.pipe(corpus_normalized, disable=['ner', 'parser'], batch_size=self.batch_size)
+        pipe = self.nlp.pipe(map(self.normalize_text, X), disable=['ner', 'parser'], batch_size=self.batch_size, n_process=self.n_process)
 
         for doc in pipe:
             results.append(self.sep.join([token.lemma_.lower() for token in doc if not (token.lemma_.lower() in self.stopwords or token.is_space or token.is_punct)]))
