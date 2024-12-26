@@ -18,6 +18,7 @@ from serializers.trainer import (
     PredictRequest,
     ModelListResponse,
     PredictResponse,
+    PredictScoresResponse
 )
 from utils.trainer import make_pipeline_from_config
 from settings.app_config import AppConfig, active_processes
@@ -161,6 +162,36 @@ class TrainerService:
             ))
 
         return model_preds
+    
+    async def predict_scores(
+        self,
+        predict_data: list[PredictRequest]
+    ) -> list[PredictResponse]:
+        unique_predict_items = {}
+        for item in predict_data:
+            if item.id not in unique_predict_items:
+                unique_predict_items[item.id] = item
+        unique_predict_items_list = list(unique_predict_items.values())
+
+        for item in unique_predict_items_list:
+            model_id = item.id
+            if model_id not in self.models:
+                raise ModelNotFoundError(model_id)
+            if model_id not in self.loaded_models:
+                raise ModelNotLoadedError(model_id)
+
+        model_scores = []
+        for item in unique_predict_items_list:
+            model = self.loaded_models.get(item.id)
+
+            if hasattr(model, 'predict_proba'):
+                scores = model.predict_proba(item.X)[:, 1]
+            elif hasattr(model, 'decision_function'):
+                scores = model.decision_function(item.X)
+
+            model_scores.append(PredictScoresResponse(scores=scores.tolist()))
+
+        return model_scores
 
     async def list_models(self) -> list[ModelListResponse]:
         models_list = [

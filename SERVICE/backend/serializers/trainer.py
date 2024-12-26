@@ -64,3 +64,6 @@ class PredictRequest(BaseModel):
 
 class PredictResponse(BaseModel):
     predictions: list[int]
+
+class PredictScoresResponse(BaseModel):
+    scores: list[float]
