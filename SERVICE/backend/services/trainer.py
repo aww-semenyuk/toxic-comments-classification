@@ -28,8 +28,8 @@ from serializers.trainer import (
 )
 from services.background_tasks import BGTasksService
 from services.utils.trainer import train_and_save_model_task
-from settings.app_config import AppConfig, active_processes
-from settings.logger_config import logger
+from settings.app_config import active_processes, app_config
+from settings.app_config import logger
 
 DEFAULT_MODEL_NAMES = ("default_logistic", "default_svm")
 
@@ -37,7 +37,6 @@ DEFAULT_MODEL_NAMES = ("default_logistic", "default_svm")
 class TrainerService:
     def __init__(
         self,
-        app_config: AppConfig,
         models_store: dict[str, MLModel],
         loaded_models: dict,
         bg_tasks_store: dict[UUID, BGTask],
@@ -47,7 +46,6 @@ class TrainerService:
         from main import app
         self.process_executor = app.state.process_executor
 
-        self.app_config = app_config
         self.models = models_store
         self.loaded_models = loaded_models
         self.bg_tasks_store = bg_tasks_store
@@ -59,7 +57,7 @@ class TrainerService:
         model_config: MLModelConfig,
         fit_dataset: pd.DataFrame
     ) -> MessageResponse:
-        if active_processes.value >= self.app_config.cores_cnt:
+        if active_processes.value >= app_config.cores_cnt:
             raise ActiveProcessesLimitExceededError()
 
         model_id = model_config.id
@@ -98,7 +96,7 @@ class TrainerService:
             model_file_path = await loop.run_in_executor(
                 self.process_executor,
                 train_and_save_model_task,
-                self.app_config.models_dir_path, model_config, fit_dataset
+                app_config.models_dir_path, model_config, fit_dataset
             )
 
             self.models[model_id] = MLModel(
@@ -128,7 +126,7 @@ class TrainerService:
         self.bg_tasks_service.rotate_tasks()
 
     async def load_model(self, model_id: str) -> list[MessageResponse]:
-        if len(self.loaded_models) == self.app_config.models_max_cnt:
+        if len(self.loaded_models) == app_config.models_max_cnt:
             raise ModelsLimitExceededError()
         if model_id not in self.models:
             raise ModelNotFoundError(model_id)
