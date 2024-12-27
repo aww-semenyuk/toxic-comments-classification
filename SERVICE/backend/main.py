@@ -8,14 +8,11 @@ from pydantic import BaseModel, ConfigDict
 
 from api.v1.background_tasks import router as background_tasks_router
 from api.v1.trainer import router as trainer_router
-from settings.app_config import AppConfig
-from settings.logger_config import logger
+from settings.app_config import logger, app_config
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app_config = AppConfig()
-
     if not app_config.models_dir_path.exists():
         app_config.models_dir_path.mkdir(parents=True)
 
