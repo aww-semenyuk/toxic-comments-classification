@@ -1,7 +1,8 @@
 from enum import Enum
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
 
 class MessageResponse(BaseModel):
     message: str
@@ -31,16 +32,11 @@ class LoadRequest(BaseModel):
     id: str
 
 
-class GetStatusResponse(BaseModel):
-    status: str
-
-
 class UnloadRequest(LoadRequest):
     pass
 
 
 class PredictRequest(BaseModel):
-    id: str
     X: list[str]
 
 
@@ -52,11 +48,10 @@ class MLModelInListResponse(BaseModel):
     id: str
     type: MLModelType
     is_trained: bool = False
+    is_loaded: bool = False
+    model_params: dict = Field(default_factory=dict)
+    vectorizer_params: dict = Field(default_factory=dict)
 
 
 class MLModel(MLModelInListResponse):
     saved_model_file_path: Path | None = None
-
-
-class PredictScoresResponse(BaseModel):
-    scores: list[float]

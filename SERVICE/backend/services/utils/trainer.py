@@ -1,6 +1,8 @@
 from pathlib import Path
+from typing import Any
 
 import cloudpickle
+import numpy as np
 import pandas as pd
 
 import spacy
@@ -14,7 +16,6 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.svm import LinearSVC
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 
-from exceptions import InvalidFitPredictDataError
 from serializers.trainer import MLModelType, VectorizerType, MLModelConfig
 
 AVAILABLE_ESTIMATORS = {
@@ -66,14 +67,12 @@ class SpacyTokenizer(BaseEstimator, TransformerMixin):
         return results
 
 
-def make_pipeline_from_config(config: MLModelConfig):
+def make_pipeline_from_config(config: MLModelConfig) -> tuple[Pipeline, dict, dict]:
     estimator = AVAILABLE_ESTIMATORS[config.ml_model_type]().set_params(**config.ml_model_params)
-    vec = AVAILABLE_VECTORIZERS[config.vectorizer_type]().set_params(**config.vectorizer_params)
-
-    print(estimator.get_params())
+    vectorizer = AVAILABLE_VECTORIZERS[config.vectorizer_type]().set_params(**config.vectorizer_params)
 
     if config.spacy_lemma_tokenizer:
-        vec = vec.set_params(
+        vectorizer = vectorizer.set_params(
             tokenizer=FunctionWrapper(lambda x: x.split('\t')),
             strip_accents=None,
             lowercase=False,
@@ -83,32 +82,30 @@ def make_pipeline_from_config(config: MLModelConfig):
         )
         pipe = Pipeline(steps=[
             ('tok', SpacyTokenizer()),
-            ('vec', vec),
+            ('vec', vectorizer),
             ('estimator', estimator)
         ])
     else:
         pipe = Pipeline(steps=[
-            ('vec', vec),
+            ('vec', vectorizer),
             ('estimator', estimator)
         ])
 
-    return pipe
+    return pipe, estimator.get_params(), vectorizer.get_params()
 
 
 def train_and_save_model_task(
     models_dir_path: Path,
     model_config: MLModelConfig,
     fit_dataset: pd.DataFrame
-) -> Path:
+) -> tuple[Path, dict, dict]:
+    model_id = model_config.id
+
     X = fit_dataset["comment_text"]
     y = fit_dataset["toxic"]
 
-    model_id = model_config.id
-    try:
-        pipe = make_pipeline_from_config(model_config)
-        pipe.fit(X, y)
-    except ValueError as e:
-        raise InvalidFitPredictDataError(e.args[0])
+    pipe, model_params, vectorizer_params = make_pipeline_from_config(model_config)
+    pipe.fit(X, y)
 
     safe_model_id = "".join(
         char for char in model_id if char.isalnum() or char in ('-', '_')
@@ -117,4 +114,25 @@ def train_and_save_model_task(
     with model_file_path.open('wb') as file:
         cloudpickle.dump(pipe, file)
 
-    return model_file_path
+    return model_file_path, model_params, vectorizer_params
+
+
+def serialize_params(obj: Any) -> Any:
+    if isinstance(obj, (int, float, str, bool, type(None))):
+        return obj
+    elif isinstance(obj, (list, tuple)):
+        return [serialize_params(item) for item in obj]
+    elif isinstance(obj, dict):
+        return {key: serialize_params(value) for key, value in obj.items()}
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, type):
+        return obj.__name__
+    elif callable(obj):
+        return obj.__name__
+    else:
+        return str(obj)

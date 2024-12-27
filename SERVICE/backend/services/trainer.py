@@ -19,15 +19,14 @@ from exceptions import (
 from serializers.background_tasks import BGTask, BGTaskStatus
 from serializers.trainer import (
     MessageResponse,
-    GetStatusResponse,
     PredictResponse,
     MLModel,
     MLModelConfig,
     PredictRequest,
-    PredictScoresResponse
+    MLModelInListResponse
 )
 from services.background_tasks import BGTasksService
-from services.utils.trainer import train_and_save_model_task
+from services.utils.trainer import train_and_save_model_task, serialize_params
 from settings.app_config import active_processes, app_config
 from settings.app_config import logger
 
@@ -93,7 +92,11 @@ class TrainerService:
 
         active_processes.value += 1
         try:
-            model_file_path = await loop.run_in_executor(
+            (
+                model_file_path,
+                model_params,
+                vectorizer_params
+            )  = await loop.run_in_executor(
                 self.process_executor,
                 train_and_save_model_task,
                 app_config.models_dir_path, model_config, fit_dataset
@@ -103,7 +106,9 @@ class TrainerService:
                 id=model_id,
                 type=model_config.ml_model_type,
                 is_trained=True,
-                saved_model_file_path=model_file_path
+                model_params=model_params,
+                vectorizer_params=vectorizer_params,
+                saved_model_file_path=model_file_path,
             )
 
             self.bg_tasks_store[bg_task_id].status = BGTaskStatus.success
@@ -136,17 +141,11 @@ class TrainerService:
         with self.models[model_id].saved_model_file_path.open('rb') as f:
             self.loaded_models[model_id] = cloudpickle.load(f)
 
+        self.models[model_id].is_loaded = True
+
         return [MessageResponse(
             message=f"Модель '{model_id}' загружена в память."
         )]
-
-    async def get_loaded_models(self) -> list[GetStatusResponse]:
-        return [
-            GetStatusResponse(
-                status=f"Модель '{model_id}' готова к использованию"
-            )
-            for model_id in self.loaded_models.keys()
-        ]
 
     async def unload_model(self, model_id: str) -> list[MessageResponse]:
         if model_id not in self.models:
@@ -157,15 +156,16 @@ class TrainerService:
             raise DefaultModelRemoveUnloadError()
 
         self.loaded_models.pop(model_id, None)
+        self.models[model_id].is_loaded = False
         return [MessageResponse(
             message=f"Модель '{model_id}' выгружена из памяти."
         )]
 
     async def predict(
         self,
+        model_id: str,
         predict_data: PredictRequest
     ) -> PredictResponse:
-        model_id = predict_data.id
         if model_id not in self.models:
             raise ModelNotFoundError(model_id)
         if model_id not in self.loaded_models:
@@ -176,38 +176,47 @@ class TrainerService:
             predictions=model.predict(predict_data.X).tolist()
         )
 
-    async def get_trained_models(self) -> list[MLModel]:
-        return list(self.models.values())
+    async def get_models(self) -> list[MLModelInListResponse]:
+        response_list = []
+
+        for model_info in self.models.values():
+            response_list.append(
+                MLModelInListResponse(
+                    id=model_info.id,
+                    type=model_info.type,
+                    is_trained=model_info.is_trained,
+                    is_loaded=model_info.is_loaded,
+                    model_params=serialize_params(model_info.model_params),
+                    vectorizer_params=serialize_params(model_info.vectorizer_params)
+                )
+            )
+
+        return response_list
     
     async def predict_scores(
         self,
-        predict_data: list[PredictRequest]
-    ) -> list[PredictResponse]:
-        unique_predict_items = {}
-        for item in predict_data:
-            if item.id not in unique_predict_items:
-                unique_predict_items[item.id] = item
-        unique_predict_items_list = list(unique_predict_items.values())
+        model_id: str,
+        predict_dataset: pd.DataFrame
+    ) -> pd.DataFrame:
+        if model_id not in self.models:
+            raise ModelNotFoundError(model_id)
+        if model_id not in self.loaded_models:
+            raise ModelNotLoadedError(model_id)
 
-        for item in unique_predict_items_list:
-            model_id = item.id
-            if model_id not in self.models:
-                raise ModelNotFoundError(model_id)
-            if model_id not in self.loaded_models:
-                raise ModelNotLoadedError(model_id)
+        model = self.loaded_models.get(model_id)
 
-        model_scores = []
-        for item in unique_predict_items_list:
-            model = self.loaded_models.get(item.id)
+        X = predict_dataset["comment_text"]
+        y_true = predict_dataset["toxic"]
 
-            if hasattr(model, 'predict_proba'):
-                scores = model.predict_proba(item.X)[:, 1]
-            elif hasattr(model, 'decision_function'):
-                scores = model.decision_function(item.X)
+        if hasattr(model, "predict_proba"):
+            scores = model.predict_proba(X)[:, 1]
+        else:
+            scores = model.decision_function(X)
 
-            model_scores.append(PredictScoresResponse(scores=scores.tolist()))
-
-        return model_scores
+        return pd.DataFrame({
+            "y_true": y_true,
+            "scores": scores
+        })
 
     async def remove_model(self, model_id: str) -> list[MessageResponse]:
         if model_id not in self.models:

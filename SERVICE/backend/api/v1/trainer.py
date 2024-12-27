@@ -1,10 +1,20 @@
+import io
 import json
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
+from fastapi import (
+    APIRouter,
+    HTTPException,
+    Depends,
+    UploadFile,
+    File,
+    Form,
+    Path
+)
 from http import HTTPStatus
 
 from starlette import status
+from starlette.responses import StreamingResponse
 
 from api.utils import extract_dataset_from_zip_file
 from dependency import get_trainer_service
@@ -21,15 +31,13 @@ from exceptions import (
 from serializers.trainer import (
     MLModelConfig,
     LoadRequest,
-    GetStatusResponse,
     MessageResponse,
     UnloadRequest,
     PredictResponse,
     MLModelType,
     MLModelInListResponse,
     PredictRequest,
-    VectorizerType,
-    PredictScoresResponse
+    VectorizerType
 )
 from services.trainer import TrainerService
 
@@ -113,13 +121,6 @@ async def load(
         )
 
 
-@router.get("/loaded_models", response_model=list[GetStatusResponse])
-async def loaded_models(
-    trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
-):
-    return await trainer_service.get_loaded_models()
-
-
 @router.post("/unload", response_model=list[MessageResponse])
 async def unload(
     request: UnloadRequest,
@@ -139,13 +140,14 @@ async def unload(
         )
 
 
-@router.post("/predict", response_model=PredictResponse)
+@router.post("/predict/{id}", response_model=PredictResponse)
 async def predict(
+    id: Annotated[str, Path()],
     request: PredictRequest,
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
 ):
     try:
-        return await trainer_service.predict(request)
+        return await trainer_service.predict(id, request)
     except ModelNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -156,14 +158,31 @@ async def predict(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=e.detail
         )
-    
-@router.post("/predict_scores", response_model=list[PredictScoresResponse])
+
+
+@router.post("/predict_scores/{id}", response_class=StreamingResponse)
 async def predict_scores(
-    request: list[PredictRequest],
+    id: Annotated[str, Path()],
+    predict_file: Annotated[UploadFile, File()],
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
 ):
+    dataset = extract_dataset_from_zip_file(predict_file)
     try:
-        return await trainer_service.predict_scores(request)
+        result = await trainer_service.predict_scores(id, dataset)
+
+        buffer = io.StringIO()
+        result.to_csv(buffer, index=False)
+        buffer.seek(0)
+
+        return StreamingResponse(
+            buffer,
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": (
+                    "attachment; filename=predicted_scores.csv"
+                )
+            }
+        )
     except ModelNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -176,20 +195,20 @@ async def predict_scores(
         )
 
 
-@router.get("/trained_models", response_model=list[MLModelInListResponse])
-async def trained_models(
+@router.get("/models", response_model=list[MLModelInListResponse])
+async def get_models(
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
 ):
-    return await trainer_service.get_trained_models()
+    return await trainer_service.get_models()
 
 
-@router.delete("/remove/{model_id}", response_model=list[MessageResponse])
+@router.delete("/remove/{id}", response_model=list[MessageResponse])
 async def remove(
-    model_id: str,
+    id: Annotated[str, Path()],
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
 ):
     try:
-        return await trainer_service.remove_model(model_id)
+        return await trainer_service.remove_model(id)
     except ModelNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
