@@ -1,31 +1,52 @@
-import shutil
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import asynccontextmanager
 
+import cloudpickle
 import uvicorn
 from fastapi import FastAPI, Request
 from pydantic import BaseModel, ConfigDict
 
 from api.v1.background_tasks import router as background_tasks_router
 from api.v1.trainer import router as trainer_router
-from settings.app_config import logger, app_config
+from serializers.trainer import MLModel
+from serializers.utils.trainer import serialize_params
+from settings.app_config import logger, app_config, MODELS_DIR
+from store import loaded_models, models, DEFAULT_MODELS_INFO
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if not app_config.models_dir_path.exists():
-        app_config.models_dir_path.mkdir(parents=True)
+    for model_id, model_info in DEFAULT_MODELS_INFO.items():
+        saved_model_path = MODELS_DIR / "default" / model_info["filename"]
+        with open(saved_model_path, "rb") as f:
+            pipe = cloudpickle.load(f)
+
+        loaded_models[model_id] = pipe
+        models[model_id] = MLModel(
+            id=model_id,
+            type=model_info["type"],
+            is_trained=True,
+            is_loaded=True,
+            model_params=serialize_params(
+                pipe.named_steps['classifier'].get_params()
+            ),
+            vectorizer_params=serialize_params(
+                pipe.named_steps['vectorizer'].get_params()
+            ),
+            saved_model_file_path=saved_model_path
+        )
+
+    logger.info("Предобученные модели загружены")
 
     app.state.process_executor = ProcessPoolExecutor(
         max_workers=app_config.cores_cnt - 1
     )
+    logger.info("Пул процессов запущен")
 
     logger.info("Application started")
     yield
     app.state.process_executor.shutdown(wait=True)
-
-    if app_config.models_dir_path.exists():
-        shutil.rmtree(app_config.models_dir_path)
+    logger.info("Пул процессов остановлен")
 
 
 app = FastAPI(

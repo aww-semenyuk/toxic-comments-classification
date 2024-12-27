@@ -12,6 +12,12 @@ class ModelIDAlreadyExistsError(Exception):
         super().__init__(self.detail)
 
 
+class ModelAlreadyLoadedError(Exception):
+    def __init__(self, model_id: str):
+        self.detail = f"Модель '{model_id}' уже загружена."
+        super().__init__(self.detail)
+
+
 class ModelNotTrainedError(Exception):
     def __init__(self, model_id: str):
         self.detail = f"Модель '{model_id}' еще не обучилась."

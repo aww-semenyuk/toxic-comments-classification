@@ -1,8 +1,6 @@
 from pathlib import Path
-from typing import Any
 
 import cloudpickle
-import numpy as np
 import pandas as pd
 
 import spacy
@@ -17,6 +15,7 @@ from sklearn.svm import LinearSVC
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 
 from serializers.trainer import MLModelType, VectorizerType, MLModelConfig
+from settings.app_config import MODELS_DIR
 
 AVAILABLE_ESTIMATORS = {
     MLModelType.logistic_regression: LogisticRegression,
@@ -95,7 +94,6 @@ def make_pipeline_from_config(config: MLModelConfig) -> tuple[Pipeline, dict, di
 
 
 def train_and_save_model_task(
-    models_dir_path: Path,
     model_config: MLModelConfig,
     fit_dataset: pd.DataFrame
 ) -> tuple[Path, dict, dict]:
@@ -107,32 +105,8 @@ def train_and_save_model_task(
     pipe, model_params, vectorizer_params = make_pipeline_from_config(model_config)
     pipe.fit(X, y)
 
-    safe_model_id = "".join(
-        char for char in model_id if char.isalnum() or char in ('-', '_')
-    ).rstrip()
-    model_file_path = models_dir_path / f"{safe_model_id}.cloudpickle"
+    model_file_path = MODELS_DIR / f"{model_id}.cloudpickle"
     with model_file_path.open('wb') as file:
         cloudpickle.dump(pipe, file)
 
     return model_file_path, model_params, vectorizer_params
-
-
-def serialize_params(obj: Any) -> Any:
-    if isinstance(obj, (int, float, str, bool, type(None))):
-        return obj
-    elif isinstance(obj, (list, tuple)):
-        return [serialize_params(item) for item in obj]
-    elif isinstance(obj, dict):
-        return {key: serialize_params(value) for key, value in obj.items()}
-    elif isinstance(obj, np.integer):
-        return int(obj)
-    elif isinstance(obj, np.floating):
-        return float(obj)
-    elif isinstance(obj, np.ndarray):
-        return obj.tolist()
-    elif isinstance(obj, type):
-        return obj.__name__
-    elif callable(obj):
-        return obj.__name__
-    else:
-        return str(obj)

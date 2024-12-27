@@ -14,7 +14,8 @@ from exceptions import (
     ModelsLimitExceededError,
     DefaultModelRemoveUnloadError,
     ModelNotTrainedError,
-    ActiveProcessesLimitExceededError
+    ActiveProcessesLimitExceededError,
+    ModelAlreadyLoadedError
 )
 from serializers.background_tasks import BGTask, BGTaskStatus
 from serializers.trainer import (
@@ -25,12 +26,12 @@ from serializers.trainer import (
     PredictRequest,
     MLModelInListResponse
 )
+from serializers.utils.trainer import serialize_params
 from services.background_tasks import BGTasksService
-from services.utils.trainer import train_and_save_model_task, serialize_params
+from services.utils.trainer import train_and_save_model_task
 from settings.app_config import active_processes, app_config
 from settings.app_config import logger
-
-DEFAULT_MODEL_NAMES = ("default_logistic", "default_svm")
+from store import DEFAULT_MODELS_INFO
 
 
 class TrainerService:
@@ -99,7 +100,7 @@ class TrainerService:
             )  = await loop.run_in_executor(
                 self.process_executor,
                 train_and_save_model_task,
-                app_config.models_dir_path, model_config, fit_dataset
+                model_config, fit_dataset
             )
 
             self.models[model_id] = MLModel(
@@ -131,7 +132,11 @@ class TrainerService:
         self.bg_tasks_service.rotate_tasks()
 
     async def load_model(self, model_id: str) -> list[MessageResponse]:
-        if len(self.loaded_models) == app_config.models_max_cnt:
+        if model_id in self.loaded_models:
+            raise ModelAlreadyLoadedError(model_id)
+        if len(self.loaded_models) >= (
+            app_config.models_max_cnt + len(DEFAULT_MODELS_INFO)
+        ):
             raise ModelsLimitExceededError()
         if model_id not in self.models:
             raise ModelNotFoundError(model_id)
@@ -152,7 +157,7 @@ class TrainerService:
             raise ModelNotFoundError(model_id)
         if model_id not in self.loaded_models:
             raise ModelNotLoadedError(model_id)
-        if model_id in DEFAULT_MODEL_NAMES:
+        if model_id in DEFAULT_MODELS_INFO:
             raise DefaultModelRemoveUnloadError()
 
         self.loaded_models.pop(model_id, None)
@@ -221,7 +226,7 @@ class TrainerService:
     async def remove_model(self, model_id: str) -> list[MessageResponse]:
         if model_id not in self.models:
             raise ModelNotFoundError(model_id)
-        if model_id in DEFAULT_MODEL_NAMES:
+        if model_id in DEFAULT_MODELS_INFO:
             raise DefaultModelRemoveUnloadError()
 
         saved_model_filepath = self.models[model_id].saved_model_file_path

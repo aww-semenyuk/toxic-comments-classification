@@ -13,6 +13,7 @@ from fastapi import (
 )
 from http import HTTPStatus
 
+from pydantic import ValidationError
 from starlette import status
 from starlette.responses import StreamingResponse
 
@@ -26,7 +27,7 @@ from exceptions import (
     InvalidFitPredictDataError,
     ActiveProcessesLimitExceededError,
     DefaultModelRemoveUnloadError,
-    ModelNotTrainedError
+    ModelNotTrainedError, ModelAlreadyLoadedError
 )
 from serializers.trainer import (
     MLModelConfig,
@@ -42,6 +43,13 @@ from serializers.trainer import (
 from services.trainer import TrainerService
 
 router = APIRouter()
+
+
+@router.get("/", response_model=list[MLModelInListResponse])
+async def get_models(
+    trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
+):
+    return await trainer_service.get_models()
 
 
 @router.post(
@@ -91,6 +99,11 @@ async def fit(
             ),
             dataset
         )
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=repr(e.errors()[0]["msg"])
+        )
     except (
         ModelIDAlreadyExistsError,
         InvalidFitPredictDataError,
@@ -114,7 +127,11 @@ async def load(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=e.detail
         )
-    except (ModelNotTrainedError, ModelsLimitExceededError) as e:
+    except (
+        ModelNotTrainedError,
+        ModelsLimitExceededError,
+        ModelAlreadyLoadedError
+    ) as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=e.detail
@@ -193,13 +210,6 @@ async def predict_scores(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=e.detail
         )
-
-
-@router.get("/models", response_model=list[MLModelInListResponse])
-async def get_models(
-    trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
-):
-    return await trainer_service.get_models()
 
 
 @router.delete("/remove/{id}", response_model=list[MessageResponse])

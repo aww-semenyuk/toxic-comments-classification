@@ -1,7 +1,8 @@
+import re
 from enum import Enum
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class MessageResponse(BaseModel):
@@ -26,6 +27,16 @@ class MLModelConfig(BaseModel):
     vectorizer_params: dict
     ml_model_type: MLModelType
     ml_model_params: dict
+
+    @field_validator("id")
+    def validate_id(cls, v):
+        if not bool(re.compile(r"^[a-z0-9_]+(?:[-_][a-z0-9_]+)*$").match(v)):
+            raise ValueError(
+                "ID модели может состоять только из строчных латинских букв, "
+                "цифр,  дефисов, и знаков подчеркивания"
+            )
+        return v
+
 
 
 class LoadRequest(BaseModel):
