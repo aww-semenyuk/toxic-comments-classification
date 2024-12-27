@@ -34,119 +34,136 @@ def is_data_correct(df):
 
 
 def learn_logistic_regression(data, penalty='none', C='1.0', solver='liblinear', max_iter=1000):
-    y = data['target']
-    X_raw = data.drop('target', axis=1)
+    try:
+        y = data['target']
+        X_raw = data.drop('target', axis=1)
 
-    # Convert continuous target to binary classes (example)
-    if y.nunique() > 2:
-        y = pd.cut(y, bins=[-float('inf'), 0.5, float('inf')], labels=[0, 1])
+        model_params = {
+            'penalty': penalty,
+            'C': C,
+            'solver': solver,
+            'max_iter': max_iter,
+            'random_state': 42,
+        }
 
-    cat_features_mask = (X_raw.dtypes == "object").values
+        # Convert continuous target to binary classes (example)
+        if y.nunique() > 2:
+            y = pd.cut(y, bins=[-float('inf'), 0.5, float('inf')], labels=[0, 1])
 
-    model = LogisticRegression()
-    X_train, X_test, y_train, y_test = train_test_split(X_raw, y, test_size=0.25, random_state=123)
+        cat_features_mask = (X_raw.dtypes == "object").values
 
-    # Преобразование числовых столбцов
-    numerical_transformer = Pipeline(steps=[
-        ('imputer', SimpleImputer(strategy='mean')),  # Замена пропусков на среднее
-        ('scaler', StandardScaler())  # Масштабирование признаков
-    ])
+        model = LogisticRegression()
+        X_train, X_test, y_train, y_test = train_test_split(X_raw, y, test_size=0.25, random_state=123)
 
-    # Преобразование категориальных столбцов
-    categorical_transformer = Pipeline(steps=[
-        ('imputer', SimpleImputer(strategy='constant', fill_value='NA')),  # Замена пропусков на 'NA'
-        ('onehot', OneHotEncoder(handle_unknown='ignore'))  # OHE-кодирование
-    ])
+        # Преобразование числовых столбцов
+        numerical_transformer = Pipeline(steps=[
+            ('imputer', SimpleImputer(strategy='mean')),  # Замена пропусков на среднее
+            ('scaler', StandardScaler())  # Масштабирование признаков
+        ])
 
-    # Объединяем преобразования с помощью ColumnTransformer
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('num', numerical_transformer, X_raw.columns[~cat_features_mask]),
-            ('cat', categorical_transformer, X_raw.columns[cat_features_mask])
-        ]
-    )
+        # Преобразование категориальных столбцов
+        categorical_transformer = Pipeline(steps=[
+            ('imputer', SimpleImputer(strategy='constant', fill_value='NA')),  # Замена пропусков на 'NA'
+            ('onehot', OneHotEncoder(handle_unknown='ignore'))  # OHE-кодирование
+        ])
 
-    # Полный пайплайн с линейной регрессией
-    pipeline = Pipeline(steps=[
-        ('preprocessor', preprocessor),
-        ('classifier', LogisticRegression(penalty=penalty, C=C, solver=solver, max_iter=max_iter, random_state=42))
-    ])
+        # Объединяем преобразования с помощью ColumnTransformer
+        preprocessor = ColumnTransformer(
+            transformers=[
+                ('num', numerical_transformer, X_raw.columns[~cat_features_mask]),
+                ('cat', categorical_transformer, X_raw.columns[cat_features_mask])
+            ]
+        )
 
-    # 3. Обучение модели
-    pipeline.fit(X_train, y_train)
+        # Полный пайплайн с линейной регрессией
+        pipeline = Pipeline(steps=[
+            ('preprocessor', preprocessor),
+            ('classifier', LogisticRegression(**model_params))
+        ])
 
-    # 4. Оценка модели
-    y_pred = pipeline.predict(X_test)
-    r2 = r2_score(y_test, y_pred)
+        # 3. Обучение модели
+        pipeline.fit(X_train, y_train)
 
-    accuracy = model.score(X_test, y_test)
+        # 4. Оценка модели
+        y_pred = pipeline.predict(X_test)
+        r2 = r2_score(y_test, y_pred)
 
-    logging.info(f"Модель logistic_regression обучена")
-    logging.info(f"R2 logistic_regression: {r2}")
-    logging.info(f"accuracy logistic_regression: {accuracy:.2f}")
+        accuracy = pipeline.score(X_test, y_test)
 
-    return r2, accuracy
+        logging.info(f"Модель logistic_regression обучена. Параметры: {model_params}")
+        logging.info(f"R2 logistic_regression: {r2}")
+        logging.info(f"accuracy logistic_regression: {accuracy:.2f}")
+        return r2, accuracy
+
+    except Exception as e:
+        logging.info(f"Ошибка обучения logistic_regression модели: {str(e)} Параметры: {model_params}")
+        return None, None
 
 
 def learn_LinearSVC_regression(data, C='1.0', penalty='l2', loss='squared_hinge', dual=True, class_weight=None, max_iter=1000):
-    y = data['target']
-    X_raw = data.drop('target', axis=1)
+    try:
+        y = data['target']
+        X_raw = data.drop('target', axis=1)
 
-    model_params = {
-        'C': C,
-        'penalty': penalty,
-        'loss': loss,
-        'dual': dual,
-        'class_weight': class_weight,
-        'max_iter': max_iter,
-        'random_state': 42
-    }
+        model_params = {
+            'C': C,
+            'penalty': penalty,
+            'loss': loss,
+            'dual': dual,
+            'class_weight': class_weight,
+            'max_iter': max_iter,
+            'random_state': 42
+        }
 
-    # Convert continuous target to binary classes (example)
-    if y.nunique() > 2:
-        y = pd.cut(y, bins=[-float('inf'), 0.5, float('inf')], labels=[0, 1])
+        # Convert continuous target to binary classes (example)
+        if y.nunique() > 2:
+            y = pd.cut(y, bins=[-float('inf'), 0.5, float('inf')], labels=[0, 1])
 
-    cat_features_mask = (X_raw.dtypes == "object").values
+        cat_features_mask = (X_raw.dtypes == "object").values
 
-    model = LogisticRegression()
-    X_train, X_test, y_train, y_test = train_test_split(X_raw, y, test_size=0.25, random_state=123)
+        model = LogisticRegression()
+        X_train, X_test, y_train, y_test = train_test_split(X_raw, y, test_size=0.25, random_state=123)
 
-    # Преобразование числовых столбцов
-    numerical_transformer = Pipeline(steps=[
-        ('imputer', SimpleImputer(strategy='mean')),  # Замена пропусков на среднее
-        ('scaler', StandardScaler())  # Масштабирование признаков
-    ])
+        # Преобразование числовых столбцов
+        numerical_transformer = Pipeline(steps=[
+            ('imputer', SimpleImputer(strategy='mean')),  # Замена пропусков на среднее
+            ('scaler', StandardScaler())  # Масштабирование признаков
+        ])
 
-    # Преобразование категориальных столбцов
-    categorical_transformer = Pipeline(steps=[
-        ('imputer', SimpleImputer(strategy='constant', fill_value='NA')),  # Замена пропусков на 'NA'
-        ('onehot', OneHotEncoder(handle_unknown='ignore'))  # OHE-кодирование
-    ])
+        # Преобразование категориальных столбцов
+        categorical_transformer = Pipeline(steps=[
+            ('imputer', SimpleImputer(strategy='constant', fill_value='NA')),  # Замена пропусков на 'NA'
+            ('onehot', OneHotEncoder(handle_unknown='ignore'))  # OHE-кодирование
+        ])
 
-    # Объединяем преобразования с помощью ColumnTransformer
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('num', numerical_transformer, X_raw.columns[~cat_features_mask]),
-            ('cat', categorical_transformer, X_raw.columns[cat_features_mask])
-        ]
-    )
+        # Объединяем преобразования с помощью ColumnTransformer
+        preprocessor = ColumnTransformer(
+            transformers=[
+                ('num', numerical_transformer, X_raw.columns[~cat_features_mask]),
+                ('cat', categorical_transformer, X_raw.columns[cat_features_mask])
+            ]
+        )
 
-    # Полный пайплайн с линейной регрессией
-    pipeline = Pipeline(steps=[
-        ('preprocessor', preprocessor),
-        ('classifier', LinearSVC(**model_params))
-    ])
+        # Полный пайплайн с линейной регрессией
+        pipeline = Pipeline(steps=[
+            ('preprocessor', preprocessor),
+            ('classifier', LinearSVC(**model_params))
+        ])
 
-    # 3. Обучение модели
-    pipeline.fit(X_train, y_train)
+        # 3. Обучение модели
+        pipeline.fit(X_train, y_train)
 
-    # 4. Оценка модели
-    y_pred = pipeline.predict(X_test)
-    r2 = r2_score(y_test, y_pred)
-    accuracy = pipeline.score(X_test, y_test)
+        # 4. Оценка модели
+        y_pred = pipeline.predict(X_test)
+        r2 = r2_score(y_test, y_pred)
+        accuracy = pipeline.score(X_test, y_test)
 
-    logging.info(f"Модель LinearSVC обучена")
-    logging.info(f"R2 LinearSVC: {r2}")
-    logging.info(f"Точность модели: {accuracy:.2f}")
+        logging.info(f"Модель LinearSVC обучена. Параметры: {model_params}")
+        logging.info(f"R2 LinearSVC: {r2}")
+        logging.info(f"Точность модели: {accuracy:.2f}")
 
-    return r2, accuracy
+        return r2, accuracy
+
+    except Exception as e:
+        logging.info(f"Ошибка обучения LinearSVC модели: {str(e)} Параметры: {model_params}")
+        return None, None

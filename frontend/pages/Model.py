@@ -7,6 +7,8 @@ from process_data import learn_logistic_regression, learn_LinearSVC_regression
 
 st.header('Обучение модели')
 shared_data = None
+model = None
+
 if 'shared_data' in st.session_state:
     shared_data = st.session_state['shared_data']
 if shared_data is not None:
@@ -32,15 +34,21 @@ if model:
         if pressed:
             if model == 'Logistic Regression':
                 r_2_score, accuracy = learn_logistic_regression(shared_data, penalty, C, solver, max_iter)
-                st.write(f'R2-score: {r_2_score}')
-                st.write(f'Accuracy: {accuracy:.2f}')
-                st.success('Модель обучена.')
+                if r_2_score is not None and accuracy is not None:
+                    st.write(f'R2-score: {r_2_score}')
+                    st.write(f'Accuracy: {accuracy:.2f}')
+                    st.success('Модель обучена.')
+                else:
+                    st.error('Ошибка при обучении модели.')
 
             if model == 'SVC':
                 r_2_score, accuracy = learn_LinearSVC_regression(shared_data, C, penalty, loss, dual, class_weight, max_iter)
-                st.write(f'R2-score: {r_2_score}')
-                st.write(f'Accuracy: {accuracy:.2f}')
-                st.success('Модель обучена.')
+                if r_2_score is not None and accuracy is not None:
+                    st.write(f'R2-score: {r_2_score}')
+                    st.write(f'Accuracy: {accuracy:.2f}')
+                    st.success('Модель обучена.')
+                else:
+                    st.error('Ошибка при обучении модели.')
 
 else:
     st.write('Для обучения модели необходимо загрузить данные во вкладке "Main"')
