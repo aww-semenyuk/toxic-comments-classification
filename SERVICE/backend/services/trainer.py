@@ -7,7 +7,6 @@ import cloudpickle
 import pandas as pd
 from fastapi import BackgroundTasks
 
-from background_tasks import prepare_predict_data
 from exceptions import (
     ModelIDAlreadyExistsError,
     ModelNotFoundError,
@@ -23,15 +22,15 @@ from serializers.trainer import (
     GetStatusResponse,
     PredictResponse,
     MLModel,
-    MLModelConfig
+    MLModelConfig,
+    PredictRequest
 )
 from services.background_tasks import BGTasksService
-from settings.app_config import (
-    AppConfig,
-    active_processes,
-    DEFAULT_MODEL_NAMES
-)
-from utils.trainer import train_and_save_model_task
+from services.utils.trainer import train_and_save_model_task
+from settings.app_config import AppConfig, active_processes
+from settings.logger_config import logger
+
+DEFAULT_MODEL_NAMES = ("default_logistic", "default_svm")
 
 
 class TrainerService:
@@ -114,14 +113,17 @@ class TrainerService:
             )
             active_processes.value -= 1
         except Exception as e:
+            self.models.pop(model_id, None)
+
             self.bg_tasks_store[bg_task_id].status = BGTaskStatus.failure
             self.bg_tasks_store[bg_task_id].result_msg = (
                 f"Ошибка при обучении модели '{model_id}': {e}."
             )
-            active_processes.value -= 1
-            raise e
-        self.bg_tasks_store[bg_task_id].updated_at = dt.datetime.now()
 
+            active_processes.value -= 1
+            logger.error(e)
+
+        self.bg_tasks_store[bg_task_id].updated_at = dt.datetime.now()
         self.bg_tasks_service.rotate_tasks()
 
     async def load_model(self, model_id: str) -> list[MessageResponse]:
@@ -139,7 +141,7 @@ class TrainerService:
             message=f"Модель '{model_id}' загружена в память."
         )]
 
-    async def get_status(self) -> list[GetStatusResponse]:
+    async def get_loaded_models(self) -> list[GetStatusResponse]:
         return [
             GetStatusResponse(
                 status=f"Модель '{model_id}' готова к использованию"
@@ -162,20 +164,20 @@ class TrainerService:
 
     async def predict(
         self,
-        model_id: str,
-        predict_dataset: pd.DataFrame
+        predict_data: PredictRequest
     ) -> PredictResponse:
+        model_id = predict_data.id
         if model_id not in self.models:
             raise ModelNotFoundError(model_id)
         if model_id not in self.loaded_models:
             raise ModelNotLoadedError(model_id)
 
         model = self.loaded_models.get(model_id)
-        # TODO: Заменить затычку на настоящую функцию (2)
-        X = prepare_predict_data()
-        return PredictResponse(predictions=model.predict(X).tolist())
+        return PredictResponse(
+            predictions=model.predict(predict_data.X).tolist()
+        )
 
-    async def list_models(self) -> list[MLModel]:
+    async def get_trained_models(self) -> list[MLModel]:
         return list(self.models.values())
 
     async def remove_model(self, model_id: str) -> list[MessageResponse]:

@@ -26,7 +26,9 @@ from serializers.trainer import (
     UnloadRequest,
     PredictResponse,
     MLModelType,
-    MLModelInListResponse
+    MLModelInListResponse,
+    PredictRequest,
+    VectorizerType
 )
 from services.trainer import TrainerService
 
@@ -39,28 +41,44 @@ router = APIRouter()
     response_model=MessageResponse
 )
 async def fit(
-    id: Annotated[str, Form()],
-    ml_model_type: Annotated[MLModelType, Form()],
-    hyperparameters: Annotated[str, Form(description="Валидная JSON-строка")],
+    trainer_service: Annotated[TrainerService, Depends(get_trainer_service)],
     fit_file: Annotated[UploadFile, File()],
-    trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
+    id: Annotated[str, Form()],
+    vectorizer_type: Annotated[VectorizerType, Form()],
+    ml_model_type: Annotated[MLModelType, Form()],
+    ml_model_params: Annotated[
+        str,
+        Form(description="Валидная JSON-строка")
+    ] = "{}",
+    spacy_lemma_tokenizer: Annotated[bool, Form()] = False,
+    vectorizer_params: Annotated[
+        str,
+        Form(description="Валидная JSON-строка")
+    ] = "{}"
 ):
-    dataset = extract_dataset_from_zip_file(fit_file)
-
     try:
-        parsed_hyperparameters = json.loads(hyperparameters)
+        parsed_ml_model_params = json.loads(ml_model_params)
+        parsed_vectorizer_params = json.loads(vectorizer_params)
     except json.decoder.JSONDecodeError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Поле 'hyperparameters' должно быть валидной JSON-строкой."
+            detail=(
+                "Поля 'ml_model_params' и 'vectorizer_params' должны быть "
+                "валидными JSON-строками."
+            )
         )
+
+    dataset = extract_dataset_from_zip_file(fit_file)
 
     try:
         return await trainer_service.fit_models(
             MLModelConfig(
                 id=id,
+                vectorizer_type=vectorizer_type,
+                spacy_lemma_tokenizer=spacy_lemma_tokenizer,
+                vectorizer_params=parsed_vectorizer_params,
                 ml_model_type=ml_model_type,
-                hyperparameters=parsed_hyperparameters
+                ml_model_params=parsed_ml_model_params
             ),
             dataset
         )
@@ -94,11 +112,11 @@ async def load(
         )
 
 
-@router.get("/get_status", response_model=list[GetStatusResponse])
-async def get_status(
+@router.get("/loaded_models", response_model=list[GetStatusResponse])
+async def loaded_models(
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
 ):
-    return await trainer_service.get_status()
+    return await trainer_service.get_loaded_models()
 
 
 @router.post("/unload", response_model=list[MessageResponse])
@@ -122,13 +140,11 @@ async def unload(
 
 @router.post("/predict", response_model=PredictResponse)
 async def predict(
-    id: Annotated[str, Form()],
-    predict_file: Annotated[UploadFile, File()],
+    request: PredictRequest,
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
 ):
-    dataset = extract_dataset_from_zip_file(predict_file)
     try:
-        return await trainer_service.predict(id, dataset)
+        return await trainer_service.predict(request)
     except ModelNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -141,11 +157,11 @@ async def predict(
         )
 
 
-@router.get("/list_models", response_model=list[MLModelInListResponse])
-async def list_models(
+@router.get("/trained_models", response_model=list[MLModelInListResponse])
+async def trained_models(
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
 ):
-    return await trainer_service.list_models()
+    return await trainer_service.get_trained_models()
 
 
 @router.delete("/remove/{model_id}", response_model=list[MessageResponse])
@@ -167,7 +183,7 @@ async def remove(
         )
 
 
-@router.delete("/remove_all", response_model=list[MessageResponse])
+@router.delete("/remove_all", response_model=MessageResponse)
 async def remove_all(
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
 ):

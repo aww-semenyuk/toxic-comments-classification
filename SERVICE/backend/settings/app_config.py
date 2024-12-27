@@ -6,9 +6,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 active_processes = multiprocessing.Value('i', 1)
 
-DEFAULT_MODEL_NAMES = ("default_logistic", "default_svm")
-
-
 class AppConfig(BaseSettings):
     models_dir_path: Path = Path('./models')
     cores_cnt: conint(gt=1) = 2

@@ -8,6 +8,3 @@ python-multipart~=0.0.20
 spacy==3.8.3
 nltk==3.9.1
 cloudpickle==3.1.0
-
-# python -m spacy download en_core_web_sm
-# python -m nltk.downloader stopwords
