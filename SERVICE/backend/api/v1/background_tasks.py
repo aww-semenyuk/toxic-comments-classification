@@ -9,7 +9,11 @@ from services.background_tasks import BGTasksService
 router = APIRouter()
 
 
-@router.get("/", response_model=list[BGTask])
+@router.get(
+    "/",
+    response_model=list[BGTask],
+    description="Получение списка задач"
+)
 async def get_tasks(
     bg_tasks_service: Annotated[BGTasksService, Depends(get_bg_tasks_service)]
 ):
