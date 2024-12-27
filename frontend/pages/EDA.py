@@ -31,6 +31,13 @@ from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import TweetTokenizer
 from nltk.corpus import stopwords
 
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from process_data import logging
+
+
 
 # Цвета для «обычных» и «токсичных» данных
 COLOR_ORDINARY = "powderblue"
@@ -256,7 +263,7 @@ if shared_data is not None:
 
     st.markdown('Количество записей: {}'.format(len(data)))
     st.markdown('Количество уникальных комментариев: {}'.format(data['comment_text'].nunique()))
-
+    logging.info('Запуск EDA по датасету')
 
     data[['text_length', 'num_words', 'num_sent', 'num_punct']] = (
             data['comment_text']
