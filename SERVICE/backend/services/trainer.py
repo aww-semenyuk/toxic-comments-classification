@@ -35,6 +35,8 @@ from store import DEFAULT_MODELS_INFO
 
 
 class TrainerService:
+    """Service for training and managing models."""
+
     def __init__(
         self,
         models_store: dict[str, MLModel],
@@ -57,6 +59,7 @@ class TrainerService:
         model_config: MLModelConfig,
         fit_dataset: pd.DataFrame
     ) -> MessageResponse:
+        """Train a new model."""
         if active_processes.value >= app_config.cores_cnt:
             raise ActiveProcessesLimitExceededError()
 
@@ -80,6 +83,7 @@ class TrainerService:
         model_config: MLModelConfig,
         fit_dataset: pd.DataFrame
     ) -> None:
+        """Execute the fitting task."""
         loop = asyncio.get_event_loop()
 
         bg_task = BGTask(name=f"Обучение модели '{model_id}'")
@@ -97,7 +101,7 @@ class TrainerService:
                 model_file_path,
                 model_params,
                 vectorizer_params
-            )  = await loop.run_in_executor(
+            ) = await loop.run_in_executor(
                 self.process_executor,
                 train_and_save_model_task,
                 model_config, fit_dataset
@@ -132,6 +136,7 @@ class TrainerService:
         self.bg_tasks_service.rotate_tasks()
 
     async def load_model(self, model_id: str) -> list[MessageResponse]:
+        """Load a model into memory."""
         if model_id in self.loaded_models:
             raise ModelAlreadyLoadedError(model_id)
         if len(self.loaded_models) >= (
@@ -153,6 +158,7 @@ class TrainerService:
         )]
 
     async def unload_model(self, model_id: str) -> list[MessageResponse]:
+        """Unload a model from memory."""
         if model_id not in self.models:
             raise ModelNotFoundError(model_id)
         if model_id not in self.loaded_models:
@@ -171,6 +177,7 @@ class TrainerService:
         model_id: str,
         predict_data: PredictRequest
     ) -> PredictResponse:
+        """Make a prediction using a model."""
         if model_id not in self.models:
             raise ModelNotFoundError(model_id)
         if model_id not in self.loaded_models:
@@ -182,6 +189,7 @@ class TrainerService:
         )
 
     async def get_models(self) -> list[MLModelInListResponse]:
+        """Get a list of models."""
         response_list = []
 
         for model_info in self.models.values():
@@ -192,17 +200,20 @@ class TrainerService:
                     is_trained=model_info.is_trained,
                     is_loaded=model_info.is_loaded,
                     model_params=serialize_params(model_info.model_params),
-                    vectorizer_params=serialize_params(model_info.vectorizer_params)
+                    vectorizer_params=serialize_params(
+                        model_info.vectorizer_params
+                    )
                 )
             )
 
         return response_list
-    
+
     async def predict_scores(
         self,
         model_id: str,
         predict_dataset: pd.DataFrame
     ) -> pd.DataFrame:
+        """Get prediction scores."""
         if model_id not in self.models:
             raise ModelNotFoundError(model_id)
         if model_id not in self.loaded_models:
@@ -224,6 +235,7 @@ class TrainerService:
         })
 
     async def remove_model(self, model_id: str) -> list[MessageResponse]:
+        """Remove a model."""
         if model_id not in self.models:
             raise ModelNotFoundError(model_id)
         if model_id in DEFAULT_MODELS_INFO:
@@ -238,6 +250,7 @@ class TrainerService:
         return [MessageResponse(message=f"Модель '{model_id}' удалена.")]
 
     async def remove_all_models(self) -> MessageResponse:
+        """Remove all models."""
         saved_model_file_paths = [
             model_info.saved_model_file_path
             for model_info in self.models.values()

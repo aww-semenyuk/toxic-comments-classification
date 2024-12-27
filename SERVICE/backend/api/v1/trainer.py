@@ -53,6 +53,7 @@ router = APIRouter()
 async def get_models(
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
 ):
+    """Endpoint to get a list of models."""
     return await trainer_service.get_models()
 
 
@@ -78,6 +79,7 @@ async def fit(
         Form(description="Валидная JSON-строка")
     ] = "{}"
 ):
+    """Endpoint to train new model."""
     try:
         parsed_ml_model_params = json.loads(ml_model_params)
         parsed_vectorizer_params = json.loads(vectorizer_params)
@@ -129,6 +131,7 @@ async def load(
     request: LoadRequest,
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
 ):
+    """Endpoint to load a model into the inference space."""
     try:
         return await trainer_service.load_model(request.id)
     except ModelNotFoundError as e:
@@ -156,6 +159,7 @@ async def unload(
     request: UnloadRequest,
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
 ):
+    """Endpoint to load a model into the inference space."""
     try:
         return await trainer_service.unload_model(request.id)
     except ModelNotFoundError as e:
@@ -180,6 +184,7 @@ async def predict(
     request: PredictRequest,
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
 ):
+    """Endpoint to make a prediction using a model."""
     try:
         return await trainer_service.predict(id, request)
     except ModelNotFoundError as e:
@@ -205,6 +210,7 @@ async def predict_scores(
     predict_file: Annotated[UploadFile, File()],
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
 ):
+    """Endpoint to get the data for building learning curves."""
     dataset = extract_dataset_from_zip_file(predict_file)
     try:
         result = await trainer_service.predict_scores(id, dataset)
@@ -243,6 +249,7 @@ async def remove(
     id: Annotated[str, Path()],
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
 ):
+    """Endpoint to remove a model."""
     try:
         return await trainer_service.remove_model(id)
     except ModelNotFoundError as e:
@@ -265,4 +272,5 @@ async def remove(
 async def remove_all(
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
 ):
+    """Endpoint to remove all models."""
     return await trainer_service.remove_all_models()

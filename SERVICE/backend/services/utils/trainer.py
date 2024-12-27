@@ -1,11 +1,11 @@
 from pathlib import Path
+import unicodedata
 
 import cloudpickle
 import pandas as pd
 
 import spacy
 import nltk
-import unicodedata
 
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import Pipeline
@@ -40,6 +40,7 @@ class FunctionWrapper:
 
 
 class SpacyTokenizer(BaseEstimator, TransformerMixin):
+    """Tokenizer using Spacy."""
     nlp = spacy.load('en_core_web_sm')
     stopwords = set(nltk.corpus.stopwords.words('english'))
 
@@ -50,25 +51,55 @@ class SpacyTokenizer(BaseEstimator, TransformerMixin):
 
     @staticmethod
     def normalize_text(doc):
-        return unicodedata.normalize('NFKD', doc).encode('ascii', 'ignore').decode('utf-8', 'ignore')
-    
+        """Normalize the text."""
+        return unicodedata.normalize(
+            'NFKD', doc
+        ).encode(
+            'ascii',
+            'ignore'
+        ).decode(
+            'utf-8',
+            'ignore'
+        )
+
     def fit(self, X, y=None):
+        """Fit the tokenizer."""
         return self
-    
+
     def transform(self, X):
+        """Transform the input data."""
         results = []
 
-        pipe = self.nlp.pipe(map(self.normalize_text, X), disable=['ner', 'parser'], batch_size=self.batch_size, n_process=self.n_process)
+        pipe = self.nlp.pipe(
+            map(self.normalize_text, X),
+            disable=['ner', 'parser'],
+            batch_size=self.batch_size,
+            n_process=self.n_process
+        )
 
         for doc in pipe:
-            results.append(self.sep.join([token.lemma_.lower() for token in doc if not (token.lemma_.lower() in self.stopwords or token.is_space or token.is_punct)]))
+            results.append(self.sep.join([
+                token.lemma_.lower() for token in doc
+                if not (
+                    token.lemma_.lower() in self.stopwords
+                    or token.is_space
+                    or token.is_punct
+                )
+            ]))
 
         return results
 
 
-def make_pipeline_from_config(config: MLModelConfig) -> tuple[Pipeline, dict, dict]:
-    estimator = AVAILABLE_ESTIMATORS[config.ml_model_type]().set_params(**config.ml_model_params)
-    vectorizer = AVAILABLE_VECTORIZERS[config.vectorizer_type]().set_params(**config.vectorizer_params)
+def make_pipeline_from_config(
+    config: MLModelConfig
+) -> tuple[Pipeline, dict, dict]:
+    """Make a pipeline from the configuration."""
+    estimator = AVAILABLE_ESTIMATORS[config.ml_model_type]().set_params(
+        **config.ml_model_params
+    )
+    vectorizer = AVAILABLE_VECTORIZERS[config.vectorizer_type]().set_params(
+        **config.vectorizer_params
+    )
 
     if config.spacy_lemma_tokenizer:
         vectorizer = vectorizer.set_params(
@@ -97,12 +128,15 @@ def train_and_save_model_task(
     model_config: MLModelConfig,
     fit_dataset: pd.DataFrame
 ) -> tuple[Path, dict, dict]:
+    """Train and save a model."""
     model_id = model_config.id
 
     X = fit_dataset["comment_text"]
     y = fit_dataset["toxic"]
 
-    pipe, model_params, vectorizer_params = make_pipeline_from_config(model_config)
+    pipe, model_params, vectorizer_params = make_pipeline_from_config(
+        model_config
+    )
     pipe.fit(X, y)
 
     model_file_path = MODELS_DIR / f"{model_id}.cloudpickle"

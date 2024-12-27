@@ -15,7 +15,8 @@ from store import loaded_models, models, DEFAULT_MODELS_INFO
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(application: FastAPI):
+    """Context manager for the lifespan of the FastAPI application."""
     for model_id, model_info in DEFAULT_MODELS_INFO.items():
         saved_model_path = MODELS_DIR / "default" / model_info["filename"]
         with open(saved_model_path, "rb") as f:
@@ -38,14 +39,14 @@ async def lifespan(app: FastAPI):
 
     logger.info("Предобученные модели загружены")
 
-    app.state.process_executor = ProcessPoolExecutor(
+    application.state.process_executor = ProcessPoolExecutor(
         max_workers=app_config.cores_cnt - 1
     )
     logger.info("Пул процессов запущен")
 
     logger.info("Application started")
     yield
-    app.state.process_executor.shutdown(wait=True)
+    application.state.process_executor.shutdown(wait=True)
     logger.info("Пул процессов остановлен")
 
 
@@ -56,17 +57,25 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
+    """Middleware function to log HTTP requests."""
     method = request.method
     url = str(request.url)
     http_version = request.scope.get("http_version", "1.1")
     response = await call_next(request)
-    logger.info(f'"{method} {url} HTTP/{http_version}" {response.status_code}')
+    logger.info(
+        '"%s %s HTTP/%s" %d',
+        method, url,
+        http_version,
+        response.status_code
+    )
     return response
 
 
 class StatusResponse(BaseModel):
+    """Pydantic model for the status response."""
     status: str
 
     model_config = ConfigDict(
@@ -80,6 +89,7 @@ class StatusResponse(BaseModel):
     description="Проверка статуса приложения"
 )
 async def root():
+    """Root endpoint to check the status of the application."""
     return [StatusResponse(status="App healthy")]
 
 

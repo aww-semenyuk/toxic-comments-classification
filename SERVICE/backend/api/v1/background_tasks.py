@@ -17,4 +17,5 @@ router = APIRouter()
 async def get_tasks(
     bg_tasks_service: Annotated[BGTasksService, Depends(get_bg_tasks_service)]
 ):
+    """Endpoint to get tasks"""
     return await bg_tasks_service.get_tasks()
