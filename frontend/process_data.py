@@ -30,13 +30,13 @@ console_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(
 logging.getLogger().addHandler(console_handler)
 
 def is_data_correct(df):
-    return {"toxicity", "comment_text"}.issubset(df.columns)
+    return {"toxic", "comment_text"}.issubset(df.columns)
 
 
 def learn_logistic_regression(data, penalty='none', C='1.0', solver='liblinear', max_iter=1000):
     try:
-        y = data['toxicity']
-        X_raw = data.drop('toxicity', axis=1)
+        y = data['toxic']
+        X_raw = data.drop('toxic', axis=1)
 
         model_params = {
             'penalty': penalty,
@@ -52,7 +52,6 @@ def learn_logistic_regression(data, penalty='none', C='1.0', solver='liblinear',
 
         cat_features_mask = (X_raw.dtypes == "object").values
 
-        model = LogisticRegression()
         X_train, X_test, y_train, y_test = train_test_split(X_raw, y, test_size=0.25, random_state=123)
 
         # Преобразование числовых столбцов
@@ -102,8 +101,8 @@ def learn_logistic_regression(data, penalty='none', C='1.0', solver='liblinear',
 
 def learn_LinearSVC_regression(data, C='1.0', penalty='l2', loss='squared_hinge', dual=True, class_weight=None, max_iter=1000):
     try:
-        y = data['toxicity']
-        X_raw = data.drop('toxicity', axis=1)
+        y = data['toxic']
+        X_raw = data.drop('toxic', axis=1)
 
         model_params = {
             'C': C,
@@ -120,7 +119,6 @@ def learn_LinearSVC_regression(data, C='1.0', penalty='l2', loss='squared_hinge'
 
         cat_features_mask = (X_raw.dtypes == "object").values
 
-        model = LogisticRegression()
         X_train, X_test, y_train, y_test = train_test_split(X_raw, y, test_size=0.25, random_state=123)
 
         # Преобразование числовых столбцов
