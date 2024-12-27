@@ -100,9 +100,8 @@ def train_and_save_model_task(
     model_config: MLModelConfig,
     fit_dataset: pd.DataFrame
 ) -> Path:
-    sample = fit_dataset.sample(n=1000)
-    X = sample["comment_text"]
-    y = sample["toxic"]
+    X = fit_dataset["comment_text"]
+    y = fit_dataset["toxic"]
 
     model_id = model_config.id
     try:
