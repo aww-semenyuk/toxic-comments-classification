@@ -23,7 +23,8 @@ from serializers.trainer import (
     PredictResponse,
     MLModel,
     MLModelConfig,
-    PredictRequest
+    PredictRequest,
+    PredictScoresResponse
 )
 from services.background_tasks import BGTasksService
 from services.utils.trainer import train_and_save_model_task
@@ -179,6 +180,36 @@ class TrainerService:
 
     async def get_trained_models(self) -> list[MLModel]:
         return list(self.models.values())
+    
+    async def predict_scores(
+        self,
+        predict_data: list[PredictRequest]
+    ) -> list[PredictResponse]:
+        unique_predict_items = {}
+        for item in predict_data:
+            if item.id not in unique_predict_items:
+                unique_predict_items[item.id] = item
+        unique_predict_items_list = list(unique_predict_items.values())
+
+        for item in unique_predict_items_list:
+            model_id = item.id
+            if model_id not in self.models:
+                raise ModelNotFoundError(model_id)
+            if model_id not in self.loaded_models:
+                raise ModelNotLoadedError(model_id)
+
+        model_scores = []
+        for item in unique_predict_items_list:
+            model = self.loaded_models.get(item.id)
+
+            if hasattr(model, 'predict_proba'):
+                scores = model.predict_proba(item.X)[:, 1]
+            elif hasattr(model, 'decision_function'):
+                scores = model.decision_function(item.X)
+
+            model_scores.append(PredictScoresResponse(scores=scores.tolist()))
+
+        return model_scores
 
     async def remove_model(self, model_id: str) -> list[MessageResponse]:
         if model_id not in self.models:

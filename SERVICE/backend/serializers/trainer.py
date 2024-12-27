@@ -56,3 +56,7 @@ class MLModelInListResponse(BaseModel):
 
 class MLModel(MLModelInListResponse):
     saved_model_file_path: Path | None = None
+
+
+class PredictScoresResponse(BaseModel):
+    scores: list[float]

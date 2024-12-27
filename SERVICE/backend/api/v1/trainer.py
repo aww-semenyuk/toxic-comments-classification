@@ -28,7 +28,8 @@ from serializers.trainer import (
     MLModelType,
     MLModelInListResponse,
     PredictRequest,
-    VectorizerType
+    VectorizerType,
+    PredictScoresResponse
 )
 from services.trainer import TrainerService
 
@@ -145,6 +146,24 @@ async def predict(
 ):
     try:
         return await trainer_service.predict(request)
+    except ModelNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=e.detail
+        )
+    except (ModelNotLoadedError, InvalidFitPredictDataError) as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=e.detail
+        )
+    
+@router.post("/predict_scores", response_model=list[PredictScoresResponse])
+async def predict_scores(
+    request: list[PredictRequest],
+    trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
+):
+    try:
+        return await trainer_service.predict_scores(request)
     except ModelNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
