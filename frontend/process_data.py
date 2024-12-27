@@ -33,7 +33,7 @@ def is_data_correct(df):
     return {"target", "comment_text"}.issubset(df.columns)
 
 
-def learn_logistic_regression(data):
+def learn_logistic_regression(data, penalty='none', C='1.0', solver='liblinear', max_iter=1000):
     y = data['target']
     X_raw = data.drop('target', axis=1)
 
@@ -69,7 +69,7 @@ def learn_logistic_regression(data):
     # Полный пайплайн с линейной регрессией
     pipeline = Pipeline(steps=[
         ('preprocessor', preprocessor),
-        ('classifier', LogisticRegression(max_iter=1000, random_state=42))
+        ('classifier', LogisticRegression(penalty=penalty, C=C, solver=solver, max_iter=max_iter, random_state=42))
     ])
 
     # 3. Обучение модели
@@ -78,16 +78,29 @@ def learn_logistic_regression(data):
     # 4. Оценка модели
     y_pred = pipeline.predict(X_test)
     r2 = r2_score(y_test, y_pred)
+
+    accuracy = model.score(X_test, y_test)
 
     logging.info(f"Модель logistic_regression обучена")
     logging.info(f"R2 logistic_regression: {r2}")
+    logging.info(f"accuracy logistic_regression: {accuracy:.2f}")
 
-    return r2
+    return r2, accuracy
 
 
-def learn_LinearSVC_regression(data):
+def learn_LinearSVC_regression(data, C='1.0', penalty='l2', loss='squared_hinge', dual=True, class_weight=None, max_iter=1000):
     y = data['target']
     X_raw = data.drop('target', axis=1)
+
+    model_params = {
+        'C': C,
+        'penalty': penalty,
+        'loss': loss,
+        'dual': dual,
+        'class_weight': class_weight,
+        'max_iter': max_iter,
+        'random_state': 42
+    }
 
     # Convert continuous target to binary classes (example)
     if y.nunique() > 2:
@@ -121,7 +134,7 @@ def learn_LinearSVC_regression(data):
     # Полный пайплайн с линейной регрессией
     pipeline = Pipeline(steps=[
         ('preprocessor', preprocessor),
-        ('classifier', LinearSVC())
+        ('classifier', LinearSVC(**model_params))
     ])
 
     # 3. Обучение модели
@@ -130,8 +143,10 @@ def learn_LinearSVC_regression(data):
     # 4. Оценка модели
     y_pred = pipeline.predict(X_test)
     r2 = r2_score(y_test, y_pred)
-    print(f'R2: {r2}')
+    accuracy = pipeline.score(X_test, y_test)
+
     logging.info(f"Модель LinearSVC обучена")
     logging.info(f"R2 LinearSVC: {r2}")
+    logging.info(f"Точность модели: {accuracy:.2f}")
 
-    return r2
+    return r2, accuracy
