@@ -1,0 +1,13 @@
+pandas==2.2.2
+streamlit==1.32.0
+pandarallel==1.6.5
+nltk==3.8.1
+plotly==5.22.0
+joblib==1.4.2
+scikit-learn==1.5.2
+numpy==1.26.4
+seaborn==0.13.2
+matplotlib==3.8.4
+wordcloud==1.9.3
+numpy==1.26.4
+
