@@ -3,7 +3,7 @@ import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from process_data import learn_logistic_regression, learn_LinearSVC_regression
+from process_data import learn_logistic_regression, learn_LinearSVC_regression, learn_naive_bayes
 
 st.header('Обучение модели')
 shared_data = None
@@ -12,7 +12,7 @@ model = None
 if 'shared_data' in st.session_state:
     shared_data = st.session_state['shared_data']
 if shared_data is not None:
-    model = st.selectbox("Выберите модель для обучение", ['Logistic Regression', 'SVC'])
+    model = st.selectbox("Выберите модель для обучение", ['Logistic Regression', 'SVC', 'Naive Bayes'])
 
     if model == 'Logistic Regression':
         penalty = st.selectbox("Penalty (Регуляризация)", ['l1', 'l2', 'elasticnet', 'none'])
@@ -28,6 +28,9 @@ if shared_data is not None:
         class_weight = st.selectbox("Class Weight (Вес классов)", [None, 'balanced'])
         max_iter = st.slider("Max Iter (Максимум итераций)", min_value=100, max_value=5000, value=1000, step=100)
 
+    if model == 'Naive Bayes':
+        alpha = st.slider("Alpha (Сглаживание)", min_value=0.01, max_value=10.0, value=1.0, step=0.1)
+        fit_prior = st.checkbox("Fit Prior (Использовать априорные вероятности)", value=True)
 
 if model:
         pressed = st.button('Обучить модель')
@@ -45,6 +48,15 @@ if model:
                 r_2_score, accuracy = learn_LinearSVC_regression(shared_data, C, penalty, loss, dual, class_weight, max_iter)
                 if r_2_score is not None and accuracy is not None:
                     st.write(f'R2-score: {r_2_score}')
+                    st.write(f'Accuracy: {accuracy:.2f}')
+                    st.success('Модель обучена.')
+                else:
+                    st.error('Ошибка при обучении модели.')
+
+
+            if model == 'Naive Bayes':
+                accuracy = learn_naive_bayes(shared_data, alpha, fit_prior)
+                if accuracy is not None:
                     st.write(f'Accuracy: {accuracy:.2f}')
                     st.success('Модель обучена.')
                 else:

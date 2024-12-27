@@ -1,5 +1,6 @@
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import LinearSVC
+from sklearn.naive_bayes import MultinomialNB
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
@@ -164,3 +165,60 @@ def learn_LinearSVC_regression(data, C='1.0', penalty='l2', loss='squared_hinge'
     except Exception as e:
         logging.info(f"Ошибка обучения LinearSVC модели: {str(e)} Параметры: {model_params}")
         return None, None
+
+
+def learn_naive_bayes(data, alpha=1.0, fit_prior=True):
+    try:
+        y = data['toxic']
+        X_raw = data.drop('toxic', axis=1)
+
+        # Параметры модели MultinomialNB
+        model_params = {
+            'alpha': alpha,  # Параметр сглаживания
+            'fit_prior': fit_prior  # Признак, указывающий следует ли использовать предположения о вероятностностях принадлежности к классам
+        }
+
+        # Преобразование целевой переменной (бинаризация, если необходимо)
+        if y.nunique() > 2:
+            y = pd.cut(y, bins=[-float('inf'), 0.5, float('inf')], labels=[0, 1])
+
+        cat_features_mask = (X_raw.dtypes == "object").values
+
+        X_train, X_test, y_train, y_test = train_test_split(X_raw, y, test_size=0.25, random_state=123)
+
+        numerical_transformer = Pipeline(steps=[
+            ('imputer', SimpleImputer(strategy='mean')),  # Замена пропусков на среднее значение
+            ('scaler', StandardScaler())  # Масштабирование признаков
+        ])
+
+        categorical_transformer = Pipeline(steps=[
+            ('imputer', SimpleImputer(strategy='constant', fill_value='NA')),  # Замена пропусков на 'NA'
+            ('onehot', OneHotEncoder(handle_unknown='ignore'))  # One-hot кодирование
+        ])
+
+        # Объединяем преобразования с помощью ColumnTransformer
+        preprocessor = ColumnTransformer(
+            transformers=[
+                ('cat', categorical_transformer, X_raw.columns[cat_features_mask])  # Для категориальных признаков
+            ]
+        )
+
+        pipeline = Pipeline(steps=[
+            ('preprocessor', preprocessor),
+            ('classifier', MultinomialNB(**model_params))  # Используем MultinomialNB
+        ])
+
+        # Обучаем модель
+        pipeline.fit(X_train, y_train)
+
+        # Оценка модели
+        accuracy = pipeline.score(X_test, y_test)
+
+        logging.info(f"Модель Naive Bayes (MultinomialNB) обучена. Параметры: {model_params}")
+        logging.info(f"accuracy Naive Bayes (MultinomialNB): {accuracy:.2f}")
+
+        return accuracy
+
+    except Exception as e:
+        logging.info(f"Ошибка обучения Naive Bayes модели: {str(e)} Параметры: {model_params}")
+        return None
