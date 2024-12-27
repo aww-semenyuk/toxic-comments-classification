@@ -15,7 +15,7 @@ uploaded_file = st.file_uploader('Загрузите файл файл с ком
 if uploaded_file is not None:
     data = load_data(uploaded_file)
     if is_data_correct(data) is False:
-        st.error('Необходимые столбцы: target и comment_text - отсутствуют в вашем файле.')
+        st.error('Необходимые столбцы: toxic и comment_text - отсутствуют в вашем файле.')
     else:
         st.dataframe(data)
 

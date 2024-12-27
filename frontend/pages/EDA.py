@@ -284,7 +284,7 @@ if shared_data is not None:
     # Обычные POS
     all_pos_o = Parallel(n_jobs=-1)(
         delayed(process_tokens)(tokens)
-        for tokens in data[data.toxicity == 0]['tokens_ws']
+        for tokens in data[data.toxic == 0]['tokens_ws']
     )
     all_pos_o = [tag for pos_list in all_pos_o for tag in pos_list]
     pos_cnt_o = Counter(all_pos_o)
@@ -296,7 +296,7 @@ if shared_data is not None:
     # Токсичные POS
     all_pos_t = Parallel(n_jobs=-1)(
         delayed(process_tokens)(tokens)
-        for tokens in data[data.toxicity > 0]['tokens_ws']
+        for tokens in data[data.toxic == 1]['tokens_ws']
     )
     all_pos_t = [tag for pos_list in all_pos_t for tag in pos_list]
     pos_cnt_t = Counter(all_pos_t)
@@ -306,8 +306,8 @@ if shared_data is not None:
     most_common_pos_t = translated_counter_t.most_common(20)
 
     # Извлечение N-грамм
-    tokens_non_toxic = data.loc[data.toxicity == 0, 'tokens_ws']
-    tokens_toxic = data.loc[data.toxicity > 0, 'tokens_ws']
+    tokens_non_toxic = data.loc[data.toxic == 0, 'tokens_ws']
+    tokens_toxic = data.loc[data.toxic == 1, 'tokens_ws']
     uawo, ngrams_non_toxic = extract_features(tokens_non_toxic)
     uawt, ngrams_toxic = extract_features(tokens_toxic)
 
@@ -322,16 +322,16 @@ if shared_data is not None:
     # Частотные словари
     data_wf = {
         "Unigram": {
-            "ordinary": get_tfd(uawo, data.loc[data.toxicity == 0, 'ctws'], 1),
-            "toxicity": get_tfd(uawt, data.loc[data.toxicity > 0, 'ctws'], 1)
+            "ordinary": get_tfd(uawo, data.loc[data.toxic == 0, 'ctws'], 1),
+            "toxic": get_tfd(uawt, data.loc[data.toxic == 1, 'ctws'], 1)
         },
         "Bigram": {
-            "ordinary": get_tfd(bos, data.loc[data.toxicity == 0, 'ctws'], 2),
-            "toxicity": get_tfd(bts, data.loc[data.toxicity > 0, 'ctws'], 2)
+            "ordinary": get_tfd(bos, data.loc[data.toxic == 0, 'ctws'], 2),
+            "toxic": get_tfd(bts, data.loc[data.toxic == 1, 'ctws'], 2)
         },
         "Trigram": {
-            "ordinary": get_tfd(tos, data.loc[data.toxicity == 0, 'ctws'], 3),
-            "toxicity": get_tfd(tts, data.loc[data.toxicity > 0, 'ctws'], 3)
+            "ordinary": get_tfd(tos, data.loc[data.toxic == 0, 'ctws'], 3),
+            "toxic": get_tfd(tts, data.loc[data.toxic == 1, 'ctws'], 3)
         }
     }
 
@@ -364,8 +364,8 @@ if shared_data is not None:
     )
 
     def add_histograms(metric):
-        toxic_data = data[data["toxicity"] > 0][metric]
-        non_toxic_data = data[data["toxicity"] == 0][metric]
+        toxic_data = data[data["toxic"] == 1][metric]
+        non_toxic_data = data[data["toxic"] == 0][metric]
 
         fig_len.add_trace(go.Histogram(
             x=non_toxic_data,
@@ -395,8 +395,8 @@ if shared_data is not None:
         visible[i*2] = True
         visible[i*2 + 1] = True
 
-        non_toxic_stats = calculate_statistics(data[data["toxicity"] == 0], m)
-        toxic_stats = calculate_statistics(data[data["toxicity"] > 0], m)
+        non_toxic_stats = calculate_statistics(data[data["toxic"] == 0], m)
+        toxic_stats = calculate_statistics(data[data["toxic"] == 1], m)
 
         annotations = [
             dict(
@@ -500,7 +500,7 @@ if shared_data is not None:
             .head(30)
         )
         toxic_df = (
-            pd.DataFrame(list(freqs["toxicity"].items()), columns=["word", "count"])
+            pd.DataFrame(list(freqs["toxic"].items()), columns=["word", "count"])
             .sort_values(by="count", ascending=False)
             .head(30)
         )
@@ -526,7 +526,7 @@ if shared_data is not None:
         fig_ngrams.add_trace(bar_toxic,   row=1, col=2)
 
         ordinary_wc = generate_wordcloud_base64(freqs["ordinary"])
-        toxic_wc = generate_wordcloud_base64(freqs["toxicity"])
+        toxic_wc = generate_wordcloud_base64(freqs["toxic"])
 
         image_configs.append([
             dict(
