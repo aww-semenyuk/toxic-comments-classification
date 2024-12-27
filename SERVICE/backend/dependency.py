@@ -6,6 +6,7 @@ from store import models, loaded_models, bg_tasks
 
 
 async def get_bg_tasks_service():
+    """Get the background tasks service."""
     return BGTasksService(bg_tasks_store=bg_tasks)
 
 
@@ -13,6 +14,7 @@ async def get_trainer_service(
     background_tasks: BackgroundTasks,
     bg_tasks_service: BGTasksService = Depends(get_bg_tasks_service)
 ):
+    """Get the trainer service."""
     return TrainerService(
         models_store=models,
         loaded_models=loaded_models,

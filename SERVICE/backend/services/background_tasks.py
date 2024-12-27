@@ -5,6 +5,8 @@ from settings.app_config import app_config
 
 
 class BGTasksService:
+    """Service for managing background tasks."""
+
     def __init__(
         self,
         bg_tasks_store: dict[UUID, BGTask]
@@ -12,9 +14,11 @@ class BGTasksService:
         self.bg_tasks = bg_tasks_store
 
     async def get_tasks(self) -> list[BGTask]:
+        """Get a list of background tasks."""
         return list(self.bg_tasks.values())
 
     def rotate_tasks(self):
+        """Rotate the background tasks."""
         if len(self.bg_tasks) > app_config.max_saved_bg_tasks:
             removable_tasks = sorted(
                 (
