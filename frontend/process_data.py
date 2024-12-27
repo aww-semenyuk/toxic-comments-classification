@@ -30,13 +30,13 @@ console_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(
 logging.getLogger().addHandler(console_handler)
 
 def is_data_correct(df):
-    return {"target", "comment_text"}.issubset(df.columns)
+    return {"toxicity", "comment_text"}.issubset(df.columns)
 
 
 def learn_logistic_regression(data, penalty='none', C='1.0', solver='liblinear', max_iter=1000):
     try:
-        y = data['target']
-        X_raw = data.drop('target', axis=1)
+        y = data['toxicity']
+        X_raw = data.drop('toxicity', axis=1)
 
         model_params = {
             'penalty': penalty,
@@ -102,8 +102,8 @@ def learn_logistic_regression(data, penalty='none', C='1.0', solver='liblinear',
 
 def learn_LinearSVC_regression(data, C='1.0', penalty='l2', loss='squared_hinge', dual=True, class_weight=None, max_iter=1000):
     try:
-        y = data['target']
-        X_raw = data.drop('target', axis=1)
+        y = data['toxicity']
+        X_raw = data.drop('toxicity', axis=1)
 
         model_params = {
             'C': C,
@@ -115,7 +115,6 @@ def learn_LinearSVC_regression(data, C='1.0', penalty='l2', loss='squared_hinge'
             'random_state': 42
         }
 
-        # Convert continuous target to binary classes (example)
         if y.nunique() > 2:
             y = pd.cut(y, bins=[-float('inf'), 0.5, float('inf')], labels=[0, 1])
 
