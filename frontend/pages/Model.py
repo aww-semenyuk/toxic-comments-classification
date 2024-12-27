@@ -1,6 +1,7 @@
 import streamlit as st
 import sys
 import os
+import plotly.graph_objects as go
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from process_data import learn_logistic_regression, learn_LinearSVC_regression, learn_naive_bayes
@@ -8,6 +9,9 @@ from process_data import learn_logistic_regression, learn_LinearSVC_regression, 
 st.header('Обучение модели')
 shared_data = None
 model = None
+
+if 'results' not in st.session_state:
+    st.session_state['results'] = {}
 
 if 'shared_data' in st.session_state:
     shared_data = st.session_state['shared_data']
@@ -40,6 +44,7 @@ if model:
                 if r_2_score is not None and accuracy is not None:
                     st.write(f'R2-score: {r_2_score}')
                     st.write(f'Accuracy: {accuracy:.2f}')
+                    st.session_state['results']['Logistic Regression'] = {'R2-score': r_2_score, 'Accuracy': accuracy}
                     st.success('Модель обучена.')
                 else:
                     st.error('Ошибка при обучении модели.')
@@ -49,6 +54,7 @@ if model:
                 if r_2_score is not None and accuracy is not None:
                     st.write(f'R2-score: {r_2_score}')
                     st.write(f'Accuracy: {accuracy:.2f}')
+                    st.session_state['results']['SVC'] = {'R2-score': r_2_score, 'Accuracy': accuracy}
                     st.success('Модель обучена.')
                 else:
                     st.error('Ошибка при обучении модели.')
@@ -58,9 +64,43 @@ if model:
                 accuracy = learn_naive_bayes(shared_data, alpha, fit_prior)
                 if accuracy is not None:
                     st.write(f'Accuracy: {accuracy:.2f}')
+                    st.session_state['results']['Naive Bayes'] = {'Accuracy': accuracy}
                     st.success('Модель обучена.')
                 else:
                     st.error('Ошибка при обучении модели.')
 
 else:
     st.write('Для обучения модели необходимо загрузить данные во вкладке "Main"')
+
+# Отображение общего графика
+if st.session_state['results']:
+    st.subheader("Результаты моделей")
+    st.write("Выберите метрики и модели для отображения:")
+
+    # Чекбоксы для метрик
+    show_r2 = st.checkbox("Показывать R2-score", value=True)
+    show_accuracy = st.checkbox("Показывать Accuracy", value=True)
+
+    # Чекбоксы для моделей
+    show_models = {
+        model_name: st.checkbox(f"Показывать {model_name}", value=True)
+        for model_name in st.session_state['results'].keys()
+    }
+
+    fig = go.Figure()
+
+    for model_name, metrics in st.session_state['results'].items():
+        if show_models.get(model_name, False):
+            if show_r2 and 'R2-score' in metrics:
+                fig.add_trace(go.Bar(name=f"{model_name} - R2-score", x=[model_name], y=[metrics['R2-score']]))
+            if show_accuracy and 'Accuracy' in metrics:
+                fig.add_trace(go.Bar(name=f"{model_name} - Accuracy", x=[model_name], y=[metrics['Accuracy']]))
+
+    fig.update_layout(
+        title="Метрики моделей",
+        barmode='group',
+        xaxis_title="Модели",
+        yaxis_title="Значение метрик",
+        legend_title="Метрики"
+    )
+    st.plotly_chart(fig)
