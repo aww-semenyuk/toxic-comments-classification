@@ -8,8 +8,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 active_processes = multiprocessing.Value('i', 1)
 
+BASE_DIR = Path(__file__).parent.parent.resolve()
+MODELS_DIR = BASE_DIR / "models"
+
 class AppConfig(BaseSettings):
-    models_dir_path: Path = Path('./models')
     cores_cnt: conint(gt=1) = 2
     models_max_cnt: int = 2
     max_saved_bg_tasks: conint(gt=2) = 10
