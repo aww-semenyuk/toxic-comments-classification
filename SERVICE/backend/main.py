@@ -74,7 +74,11 @@ class StatusResponse(BaseModel):
     )
 
 
-@app.get("/", response_model=list[StatusResponse])
+@app.get(
+    "/",
+    response_model=list[StatusResponse],
+    description="Проверка статуса приложения"
+)
 async def root():
     return [StatusResponse(status="App healthy")]
 

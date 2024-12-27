@@ -45,7 +45,11 @@ from services.trainer import TrainerService
 router = APIRouter()
 
 
-@router.get("/", response_model=list[MLModelInListResponse])
+@router.get(
+    "/",
+    response_model=list[MLModelInListResponse],
+    description="Получение списка моделей"
+)
 async def get_models(
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
 ):
@@ -55,7 +59,8 @@ async def get_models(
 @router.post(
     "/fit",
     status_code=HTTPStatus.OK,
-    response_model=MessageResponse
+    response_model=MessageResponse,
+    description="Обучение новой модели"
 )
 async def fit(
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)],
@@ -115,7 +120,11 @@ async def fit(
         )
 
 
-@router.post("/load", response_model=list[MessageResponse])
+@router.post(
+    "/load",
+    response_model=list[MessageResponse],
+    description="Загрузка модели в пространство инференса"
+)
 async def load(
     request: LoadRequest,
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
@@ -138,7 +147,11 @@ async def load(
         )
 
 
-@router.post("/unload", response_model=list[MessageResponse])
+@router.post(
+    "/unload",
+    response_model=list[MessageResponse],
+    description="Выгрузка модели из пространства инференса"
+)
 async def unload(
     request: UnloadRequest,
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
@@ -157,7 +170,11 @@ async def unload(
         )
 
 
-@router.post("/predict/{id}", response_model=PredictResponse)
+@router.post(
+    "/predict/{id}",
+    response_model=PredictResponse,
+    description="Предсказание модели"
+)
 async def predict(
     id: Annotated[str, Path()],
     request: PredictRequest,
@@ -177,7 +194,12 @@ async def predict(
         )
 
 
-@router.post("/predict_scores/{id}", response_class=StreamingResponse)
+@router.post(
+    "/predict_scores/{id}",
+    response_class=StreamingResponse,
+    description="Получение данных для построения кривых обучения",
+    response_description="CSV-файл с данными для построения кривых обучения"
+)
 async def predict_scores(
     id: Annotated[str, Path()],
     predict_file: Annotated[UploadFile, File()],
@@ -212,7 +234,11 @@ async def predict_scores(
         )
 
 
-@router.delete("/remove/{id}", response_model=list[MessageResponse])
+@router.delete(
+    "/remove/{id}",
+    response_model=list[MessageResponse],
+    description="Удаление модели"
+)
 async def remove(
     id: Annotated[str, Path()],
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
@@ -231,7 +257,11 @@ async def remove(
         )
 
 
-@router.delete("/remove_all", response_model=MessageResponse)
+@router.delete(
+    "/remove_all",
+    response_model=MessageResponse,
+    description="Удаление всех моделей"
+)
 async def remove_all(
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
 ):
