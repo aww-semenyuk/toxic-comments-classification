@@ -40,31 +40,32 @@ if model:
         pressed = st.button('Обучить модель')
         if pressed:
             if model == 'Logistic Regression':
-                r_2_score, accuracy = learn_logistic_regression(shared_data, penalty, C, solver, max_iter)
-                if r_2_score is not None and accuracy is not None:
-                    st.write(f'R2-score: {r_2_score}')
+                f1_score, accuracy = learn_logistic_regression(shared_data, penalty, C, solver, max_iter)
+                if f1_score is not None and accuracy is not None:
+                    st.write(f'F1-score: {f1_score:.2f}')
                     st.write(f'Accuracy: {accuracy:.2f}')
-                    st.session_state['results']['Logistic Regression'] = {'R2-score': r_2_score, 'Accuracy': accuracy}
+                    st.session_state['results']['Logistic Regression'] = {'F1-score': f"{f1_score:.2f}", 'Accuracy': accuracy}
                     st.success('Модель обучена.')
                 else:
                     st.error('Ошибка при обучении модели.')
 
             if model == 'SVC':
-                r_2_score, accuracy = learn_LinearSVC_regression(shared_data, C, penalty, loss, dual, class_weight, max_iter)
-                if r_2_score is not None and accuracy is not None:
-                    st.write(f'R2-score: {r_2_score}')
+                f1_score, accuracy = learn_LinearSVC_regression(shared_data, C, penalty, loss, dual, class_weight, max_iter)
+                if f1_score is not None and accuracy is not None:
+                    st.write(f'F1-score: {f1_score:.2f}')
                     st.write(f'Accuracy: {accuracy:.2f}')
-                    st.session_state['results']['SVC'] = {'R2-score': r_2_score, 'Accuracy': accuracy}
+                    st.session_state['results']['SVC'] = {'F1-score': f"{f1_score:.2f}", 'Accuracy': accuracy}
                     st.success('Модель обучена.')
                 else:
                     st.error('Ошибка при обучении модели.')
 
 
             if model == 'Naive Bayes':
-                accuracy = learn_naive_bayes(shared_data, alpha, fit_prior)
+                f1_score, accuracy = learn_naive_bayes(shared_data, alpha, fit_prior)
                 if accuracy is not None:
+                    st.write(f'F1-score: {f1_score:.2f}')
                     st.write(f'Accuracy: {accuracy:.2f}')
-                    st.session_state['results']['Naive Bayes'] = {'Accuracy': accuracy}
+                    st.session_state['results']['Naive Bayes'] = {'F1-score': f1_score, 'Accuracy': accuracy}
                     st.success('Модель обучена.')
                 else:
                     st.error('Ошибка при обучении модели.')
@@ -78,7 +79,7 @@ if st.session_state['results']:
     st.write("Выберите метрики и модели для отображения:")
 
     # Чекбоксы для метрик
-    show_r2 = st.checkbox("Показывать R2-score", value=True)
+    show_f1 = st.checkbox("Показывать F1-score", value=True)
     show_accuracy = st.checkbox("Показывать Accuracy", value=True)
 
     # Чекбоксы для моделей
@@ -91,8 +92,8 @@ if st.session_state['results']:
 
     for model_name, metrics in st.session_state['results'].items():
         if show_models.get(model_name, False):
-            if show_r2 and 'R2-score' in metrics:
-                fig.add_trace(go.Bar(name=f"{model_name} - R2-score", x=[model_name], y=[metrics['R2-score']]))
+            if show_f1 and 'F1-score' in metrics:
+                fig.add_trace(go.Bar(name=f"{model_name} - F1-score", x=[model_name], y=[metrics['F1-score']]))
             if show_accuracy and 'Accuracy' in metrics:
                 fig.add_trace(go.Bar(name=f"{model_name} - Accuracy", x=[model_name], y=[metrics['Accuracy']]))
 
