@@ -101,10 +101,13 @@ class TrainerService:
                 model_file_path,
                 model_params,
                 vectorizer_params
-            ) = await loop.run_in_executor(
-                self.process_executor,
-                train_and_save_model_task,
-                model_config, fit_dataset
+            ) = await asyncio.wait_for(
+                loop.run_in_executor(
+                    self.process_executor,
+                    train_and_save_model_task,
+                    model_config, fit_dataset
+                ),
+                timeout=1800
             )
 
             self.models[model_id] = MLModel(
@@ -125,12 +128,20 @@ class TrainerService:
             self.models.pop(model_id, None)
 
             self.bg_tasks_store[bg_task_id].status = BGTaskStatus.failure
-            self.bg_tasks_store[bg_task_id].result_msg = (
-                f"Ошибка при обучении модели '{model_id}': {e}."
-            )
+
+            if isinstance(e, TimeoutError):
+                result_msg = (
+                    f"Превышено время обучения модели ({model_id}). "
+                    "Задача остановлена."
+                )
+                logger.info(result_msg)
+            else:
+                result_msg = f"Ошибка при обучении модели '{model_id}': {e}."
+                logger.error(result_msg)
+
+            self.bg_tasks_store[bg_task_id].result_msg = result_msg
 
             active_processes.value -= 1
-            logger.error(e)
 
         self.bg_tasks_store[bg_task_id].updated_at = dt.datetime.now()
         self.bg_tasks_service.rotate_tasks()
