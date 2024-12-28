@@ -11,7 +11,7 @@ from sklearn.metrics import f1_score
 import pandas as pd
 import os
 import logging
-from client import get_background_tasks, train_model, get_list_models
+from client import get_background_tasks, train_model, get_list_models, remove_all_models
 import asyncio
 import zipfile
 import io
@@ -116,7 +116,7 @@ def learn_LinearSVC_regression(data, C='1.0', penalty='l2', loss='squared_hinge'
         logging.info(f"f1 LinearSVC: {f1:.2f}")
         logging.info(f"Точность модели: {accuracy:.2f}")
 
-        return r2, accuracy
+        return f1, accuracy
 
     except Exception as e:
         logging.info(f"Ошибка обучения LinearSVC модели: {str(e)} Параметры: {model_params}")
@@ -216,3 +216,7 @@ def create_zip_from_csv(uploaded_file, zip_filename: str) -> bytes:
         zip_file.writestr(zip_filename, csv_content)
 
     return zip_buffer.getvalue()
+
+
+def delete_all_models():
+    asyncio.run(remove_all_models())

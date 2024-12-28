@@ -50,39 +50,39 @@ async def load_model(client: httpx.AsyncClient, model_id: str):
     """
     Загрузка модели на сервере.
     """
-    print(f"Загрузка модели {model_id}...")
+    logging.info(f" load_model - Загрузка модели {model_id}...")
     try:
         response = await client.post(f"{BASE_URL}/load", json={"id": model_id})
         response.raise_for_status()
-        print(f"Модель {model_id} загружена: {response.json()}")
+        logging.info(f"load_model - Модель {model_id} загружена: {response.json()}")
     except httpx.HTTPStatusError as e:
-        print(f"Ошибка при загрузке модели {model_id}: {e.response.json()}")
+        logging.info(f"load_model - Ошибка при загрузке модели {model_id}: {e.response.json()}")
 
 
 async def unload_model(client: httpx.AsyncClient, model_id: str):
     """
     Выгрузка модели.
     """
-    print("Выгрузка модели...")
+    logging.info("unload_model - Выгрузка модели...")
     try:
         response = await client.post(f"{BASE_URL}/unload", json={"id": model_id})
         response.raise_for_status()
-        print(f"Модель выгружена: {response.json()}")
+        logging.info(f"unload_model - Модель выгружена: {response.json()}")
     except httpx.HTTPStatusError as e:
-        print(f"Ошибка при выгрузке модели: {e.response.json()}")
+        logging.info(f"unload_model - Ошибка при выгрузке модели: {e.response.json()}")
 
 
 async def predict_model(client: httpx.AsyncClient, id: str, X: List[List[float]]):
     """
     Predict модели.
     """
-    print("Predict модели...")
+    logging.info("predict_model - Predict модели...")
     try:
         response = await client.post(f"{BASE_URL}/predict", json={"id": "linear_1231", "X": X})
         response.raise_for_status()
-        print(f"Predict Модели {id}: {response.json()}")
+        logging.info(f"Predict Модели {id}: {response.json()}")
     except httpx.HTTPStatusError as e:
-        print(f"Ошибка при Predict модели {id}: {e.response.json()}")
+        logging.info(f"Ошибка при Predict модели {id}: {e.response.json()}")
 
 
 async def remove_model(client: httpx.AsyncClient, id: str):
@@ -97,16 +97,17 @@ async def remove_model(client: httpx.AsyncClient, id: str):
         logging.info(f"Ошибка при remove_model запросе {id}: {e.response.json()}")
 
 
-async def remove_all_models(client: httpx.AsyncClient):
+async def remove_all_models():
     """
      Запрос на remove_all_models.
     """
     logging.info(f"Удаление всех моделей delete_all_models")
-    try:
-        response = await client.delete(f"{BASE_URL}/remove_all")
-        response.raise_for_status()
-    except httpx.HTTPStatusError as e:
-        logging.info(f"Ошибка при удалении всех моделей delete_all_models: {e.response.json()}")
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.delete(f"{BASE_URL}/models/remove_all")
+            response.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            logging.info(f"Ошибка при удалении всех моделей delete_all_models: {e.response.json()}")
 
 
 async def get_background_tasks() -> List[Any]:
