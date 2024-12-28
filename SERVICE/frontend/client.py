@@ -85,16 +85,17 @@ async def predict_model(client: httpx.AsyncClient, id: str, X: List[List[float]]
         logging.info(f"Ошибка при Predict модели {id}: {e.response.json()}")
 
 
-async def remove_model(client: httpx.AsyncClient, id: str):
+async def remove_model(id: str):
     """
     Запрос на удаление модели.
     """
     logging.info(f"Удаление модели remove_model id: {id}")
-    try:
-        response = await client.delete(f"{BASE_URL}/remove/{id}")
-        response.raise_for_status()
-    except httpx.HTTPStatusError as e:
-        logging.info(f"Ошибка при remove_model запросе {id}: {e.response.json()}")
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.delete(f"{BASE_URL}/remove/{id}")
+            response.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            logging.info(f"Ошибка при remove_model запросе {id}: {e.response.json()}")
 
 
 async def remove_all_models():
