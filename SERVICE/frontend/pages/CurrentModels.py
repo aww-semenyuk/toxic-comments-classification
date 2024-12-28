@@ -15,7 +15,7 @@ if df.empty is False:
     header_col1.write("**ID**")
     header_col2.write("**Тип модели**")
     header_col3.write("**Модель обучена**")
-    header_col4.write("**Модель загружена**")
+    header_col4.write("**Загрузить/Выгрузить модель**")
     header_col5.write("**Действие**")
     for i, row in df.iterrows():
         col1, col2, col3, col4, col5 = st.columns([2, 3, 2, 2, 2])
