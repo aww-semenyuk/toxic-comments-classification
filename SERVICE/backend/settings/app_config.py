@@ -33,7 +33,7 @@ class AppConfig(BaseSettings):
 app_config = AppConfig()
 
 file_formatter = logging.Formatter("%(asctime)s [%(levelname)s] - %(message)s")
-stream_formatter = logging.Formatter("%(levelname)s:\t  %(message)s")
+stream_formatter = logging.Formatter("%(levelname)s:     %(message)s")
 
 timed_handler = TimedRotatingFileHandler(
     app_config.log_file_path,
