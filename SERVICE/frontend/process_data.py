@@ -11,7 +11,7 @@ from sklearn.metrics import f1_score
 import pandas as pd
 import os
 import logging
-from client import get_background_tasks, train_model, get_list_models, remove_all_models
+from client import get_background_tasks, train_model, get_list_models, remove_all_models, remove_model
 import asyncio
 import zipfile
 import io
@@ -194,9 +194,14 @@ def map_background_tasks() -> pd.DataFrame:
     return df
 
 
+# Функция, которая будет вызываться при нажатии кнопки
+def delete_action(row_id):
+    asyncio.run(remove_model(row_id))
+
 def map_current_models() -> pd.DataFrame:
     res = asyncio.run(get_list_models())
     df = pd.DataFrame(res)
+
     df = df.rename(columns={"is_trained": "Модель обучена", "is_loaded": "Модель загружена", "type": "Тип модели"})
     return df
 
