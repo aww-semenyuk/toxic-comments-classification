@@ -18,7 +18,7 @@ class AppConfig(BaseSettings):
     cores_cnt: conint(gt=1) = 2
     models_max_cnt: int = 2
     max_saved_bg_tasks: conint(gt=2) = 10
-    log_file_path: Path = Path('./app.log')
+    log_file_path: Path = Path(BASE_DIR / 'logs' / 'backend.log')
 
     model_config = SettingsConfigDict(env_file='.env')
 
