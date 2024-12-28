@@ -65,7 +65,14 @@ async def get_models(
 )
 async def fit(
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)],
-    fit_file: Annotated[UploadFile, File()],
+    fit_file: Annotated[
+        UploadFile,
+        File(description=(
+            "ZIP-архив с CSV-файлом. Файл должен содержать 2 столбца: "
+            "`comment_text` (сырой текст) "
+            "и `toxic` (бинарная метка токсичности)"
+        ))
+    ],
     id: Annotated[str, Form()],
     vectorizer_type: Annotated[VectorizerType, Form()],
     ml_model_type: Annotated[MLModelType, Form()],
@@ -207,7 +214,14 @@ async def predict(
 )
 async def predict_scores(
     id: Annotated[str, Path()],
-    predict_file: Annotated[UploadFile, File()],
+    predict_file: Annotated[
+        UploadFile,
+        File(description=(
+            "ZIP-архив с CSV-файлом. Файл должен содержать 2 столбца: "
+            "`comment_text` (сырой текст) и "
+            "`toxic` (бинарная метка токсичности)"
+        ))
+    ],
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
 ):
     """Endpoint to get the data for building learning curves."""

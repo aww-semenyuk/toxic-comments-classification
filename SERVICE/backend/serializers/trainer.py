@@ -55,7 +55,9 @@ class UnloadRequest(LoadRequest):
 
 class PredictRequest(BaseModel):
     """Pydantic model for the predict request."""
-    X: list[str]
+    X: list[str] = Field(
+        description="Кавычки в тексте необходимо экранировать"
+    )
 
 
 class PredictResponse(BaseModel):
