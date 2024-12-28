@@ -46,30 +46,36 @@ async def get_list_models():
             logging.info(f"get_list_models - Ошибка при получении списка моделей: {e.response.json()}")
 
 
-async def load_model(client: httpx.AsyncClient, model_id: str):
+async def load_model(model_id: str):
     """
     Загрузка модели на сервере.
     """
     logging.info(f" load_model - Загрузка модели {model_id}...")
-    try:
-        response = await client.post(f"{BASE_URL}/load", json={"id": model_id})
-        response.raise_for_status()
-        logging.info(f"load_model - Модель {model_id} загружена: {response.json()}")
-    except httpx.HTTPStatusError as e:
-        logging.info(f"load_model - Ошибка при загрузке модели {model_id}: {e.response.json()}")
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(f"{BASE_URL}/models/load", json={"id": model_id})
+            response.raise_for_status()
+            logging.info(f"load_model - Модель {model_id} загружена: {response.json()}")
+            return False
+        except httpx.HTTPStatusError as e:
+            logging.info(f"load_model - Ошибка при загрузке модели {model_id}: {e.response.json()}")
+            return True
 
 
-async def unload_model(client: httpx.AsyncClient, model_id: str):
+async def unload_model(model_id: str) -> bool:
     """
     Выгрузка модели.
     """
     logging.info("unload_model - Выгрузка модели...")
-    try:
-        response = await client.post(f"{BASE_URL}/unload", json={"id": model_id})
-        response.raise_for_status()
-        logging.info(f"unload_model - Модель выгружена: {response.json()}")
-    except httpx.HTTPStatusError as e:
-        logging.info(f"unload_model - Ошибка при выгрузке модели: {e.response.json()}")
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(f"{BASE_URL}/models/unload", json={"id": model_id})
+            response.raise_for_status()
+            logging.info(f"unload_model - Модель выгружена: {response.json()}")
+            return False
+        except httpx.HTTPStatusError as e:
+            logging.info(f"unload_model - Ошибка при выгрузке модели: {e.response.json()}")
+            return True
 
 
 async def predict_model(client: httpx.AsyncClient, id: str, X: List[List[float]]):

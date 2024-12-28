@@ -11,7 +11,7 @@ from sklearn.metrics import f1_score
 import pandas as pd
 import os
 import logging
-from client import get_background_tasks, train_model, get_list_models, remove_all_models, remove_model
+from client import get_background_tasks, train_model, get_list_models, remove_all_models, remove_model, load_model, unload_model
 import asyncio
 import zipfile
 import io
@@ -198,6 +198,17 @@ def map_background_tasks() -> pd.DataFrame:
 def delete_action(row_id) -> bool:
     err = asyncio.run(remove_model(row_id))
     return err
+
+
+def load_model_action(row_id) -> bool:
+    err = asyncio.run(load_model(row_id))
+    return err
+
+
+def unload_model_action(row_id) -> bool:
+    err = asyncio.run(unload_model(row_id))
+    return err
+
 
 def map_current_models() -> pd.DataFrame:
     res = asyncio.run(get_list_models())

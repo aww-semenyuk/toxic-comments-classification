@@ -1,5 +1,5 @@
 import streamlit as st
-from process_data import map_current_models, delete_all_models, delete_action
+from process_data import map_current_models, delete_all_models, delete_action, load_model_action, unload_model_action
 
 st.title("Управление текущими моделями")
 
@@ -17,8 +17,24 @@ if df.empty is False:
         col1.write(row["id"])
         col2.write(row["Тип модели"])
         col3.write(row["Модель обучена"])
-        col4.write(row["Модель загружена"])
-        pressed = col5.button("Выполнить", key=f"button_{row['id']}")
+        if row["Модель загружена"] is True:
+            pressed_unload = col4.button("Выгрузить модель", key=f"button_unload_{row['id']}")
+            if pressed_unload:
+                err = unload_model_action(row["id"])
+                if err is not None:
+                    st.error(f"Ошибка при выгрузки модели {row['id']}: {err}")
+                else:
+                    st.success(f"Модель выгружена {row['id']}.")
+        else:
+            pressed_load = col4.button("Загрузить модель", key=f"button_load_{row['id']}")
+            if pressed_load:
+                err = load_model_action(row["id"])
+                if err is not None:
+                    st.error(f"Ошибка при загрузки модели {row['id']}: {err}")
+                else:
+                    st.success(f"Модель загружена {row['id']}.")
+
+        pressed = col5.button("Удалить модель", key=f"button_{row['id']}")
         if pressed:
             err = delete_action(row["id"])
             if err is not None:
