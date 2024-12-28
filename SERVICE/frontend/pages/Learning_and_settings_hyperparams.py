@@ -7,15 +7,15 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from process_data import learn_logistic_regression, learn_LinearSVC_regression, learn_naive_bayes
 
 st.header('Обучение модели')
-shared_data = None
+zipped_csv = None
 model = None
 
 if 'results' not in st.session_state:
     st.session_state['results'] = {}
 
-if 'shared_data' in st.session_state:
-    shared_data = st.session_state['shared_data']
-if shared_data is not None:
+if 'zipped_csv' in st.session_state:
+    zipped_csv = st.session_state['zipped_csv']
+if zipped_csv is not None:
     model = st.selectbox("Выберите модель для обучение", ['Logistic Regression', 'SVC', 'Naive Bayes'])
 
     if model == 'Logistic Regression':
@@ -40,11 +40,8 @@ if model:
         pressed = st.button('Обучить модель')
         if pressed:
             if model == 'Logistic Regression':
-                f1_score, accuracy = learn_logistic_regression(shared_data, penalty, C, solver, max_iter)
-                if f1_score is not None and accuracy is not None:
-                    st.write(f'F1-score: {f1_score:.2f}')
-                    st.write(f'Accuracy: {accuracy:.2f}')
-                    st.session_state['results']['Logistic Regression'] = {'F1-score': f"{f1_score:.2f}", 'Accuracy': accuracy}
+                err = learn_logistic_regression(zipped_csv, penalty, C, solver, max_iter)
+                if err is None:
                     st.success('Модель обучена.')
                 else:
                     st.error('Ошибка при обучении модели.')

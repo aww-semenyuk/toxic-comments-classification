@@ -1,47 +1,49 @@
 import httpx
-from typing import List
+from typing import List, Any
 from process_data import logging
 
 BASE_URL = "http://127.0.0.1:8000/api/v1"
 
 
-async def train_model(client: httpx.AsyncClient, model_id: str, model_type: str, X: List[List[float]], y: List[float]):
+async def train_model(data, model_id: str = 'default_logistic', model_type: str = 'linear_svc'):
     """
     Отправка запроса на обучение модели.
     """
-    print(f"Начало обучения модели {model_id} ({model_type})...")
-    try:
-        response = await client.post(
-            f"{BASE_URL}/fit",
-            json=[
-                {
-                    "X": X,
-                    "y": y,
-                    "config": {
-                        "id": model_id,
-                        "ml_model_type": model_type,
-                        "hyperparameters": {"fit_intercept": True}
-                    }
-                }
-            ],
-        )
-        response.raise_for_status()
-        print(f"Модель {model_id} обучена: {response.json()}")
-    except httpx.HTTPStatusError as e:
-        print(f"Ошибка при обучении модели {model_id}: {e.response.json()}")
+    logging.info(f"train_model - Начало обучения модели model_id={model_id} model_type={model_type}")
+    async with httpx.AsyncClient() as client:
+        try:
+            files = {
+                "fit_file": ("archive.zip", data, "application/zip")
+            }
+            data = {
+                "id": model_id,
+                "vectorizer_type": "bag_of_words",
+                "ml_model_type": model_type,
+            }
+            response = await client.post(
+                f"{BASE_URL}/models/fit",
+                files=files,
+                data=data,
+            )
+            response.raise_for_status()
+            logging.info(f"train_model - Модель {model_id}  обучена: {response.json()}")
+        except httpx.HTTPStatusError as e:
+            logging.info(f"train_model - Ошибка при обучении модели {model_id}: {e.response.json()}")
 
 
-async def list_models(client: httpx.AsyncClient):
+async def get_list_models():
     """
     Список всех моделей.
     """
-    print("Получение списка моделей...")
-    try:
-        response = await client.get(f"{BASE_URL}/list_models")
-        response.raise_for_status()
-        print(f"Список моделей: {response.json()}")
-    except httpx.HTTPStatusError as e:
-        print(f"Ошибка при получении списка моделей: {e.response.json()}")
+    logging.info("get_list_models - Получение списка моделей...")
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(f"{BASE_URL}/models/")
+            response.raise_for_status()
+            logging.info(f"get_list_models - Список моделей: {response.json()}")
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            logging.info(f"get_list_models - Ошибка при получении списка моделей: {e.response.json()}")
 
 
 async def load_model(client: httpx.AsyncClient, model_id: str):
@@ -107,7 +109,7 @@ async def remove_all_models(client: httpx.AsyncClient):
         logging.info(f"Ошибка при удалении всех моделей delete_all_models: {e.response.json()}")
 
 
-async def get_background_tasks():
+async def get_background_tasks() -> List[Any]:
     """
     Запрос на получение всех background_tasks.
     """
