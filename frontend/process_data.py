@@ -6,7 +6,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.metrics import r2_score
+from sklearn.metrics import f1_score
 import pandas as pd
 import os
 import logging
@@ -86,14 +86,14 @@ def learn_logistic_regression(data, penalty='none', C='1.0', solver='liblinear',
 
         # 4. Оценка модели
         y_pred = pipeline.predict(X_test)
-        r2 = r2_score(y_test, y_pred)
+        f1 = f1_score(y_test, y_pred)
 
         accuracy = pipeline.score(X_test, y_test)
 
         logging.info(f"Модель logistic_regression обучена. Параметры: {model_params}")
-        logging.info(f"R2 logistic_regression: {r2}")
+        logging.info(f"F1_score logistic_regression: {f1:.2f}")
         logging.info(f"accuracy logistic_regression: {accuracy:.2f}")
-        return r2, accuracy
+        return f1, accuracy
 
     except Exception as e:
         logging.info(f"Ошибка обучения logistic_regression модели: {str(e)} Параметры: {model_params}")
@@ -153,11 +153,11 @@ def learn_LinearSVC_regression(data, C='1.0', penalty='l2', loss='squared_hinge'
 
         # 4. Оценка модели
         y_pred = pipeline.predict(X_test)
-        r2 = r2_score(y_test, y_pred)
+        f1 = f1_score(y_test, y_pred)
         accuracy = pipeline.score(X_test, y_test)
 
         logging.info(f"Модель LinearSVC обучена. Параметры: {model_params}")
-        logging.info(f"R2 LinearSVC: {r2}")
+        logging.info(f"f1 LinearSVC: {f1:.2f}")
         logging.info(f"Точность модели: {accuracy:.2f}")
 
         return r2, accuracy
@@ -212,12 +212,15 @@ def learn_naive_bayes(data, alpha=1.0, fit_prior=True):
         pipeline.fit(X_train, y_train)
 
         # Оценка модели
+        y_pred = pipeline.predict(X_test)
+        f1 = f1_score(y_test, y_pred)
         accuracy = pipeline.score(X_test, y_test)
 
         logging.info(f"Модель Naive Bayes (MultinomialNB) обучена. Параметры: {model_params}")
+        logging.info(f"f1 Naive Bayes (MultinomialNB): {f1:.2f}")
         logging.info(f"accuracy Naive Bayes (MultinomialNB): {accuracy:.2f}")
 
-        return accuracy
+        return f1, accuracy
 
     except Exception as e:
         logging.info(f"Ошибка обучения Naive Bayes модели: {str(e)} Параметры: {model_params}")
