@@ -6,6 +6,11 @@ st.title("Управление текущими моделями")
 df = map_current_models()
 
 if df.empty is False:
+    pressed = st.button("Удалить все модели")
+    if pressed:
+        delete_all_models()
+        st.success("Текущие модели удалены.")
+    st.divider()
     header_col1, header_col2, header_col3, header_col4, header_col5 = st.columns([2, 3, 2, 2, 2])
     header_col1.write("**ID**")
     header_col2.write("**Тип модели**")
@@ -42,9 +47,5 @@ if df.empty is False:
             else:
                 st.success(f"Модель удалена {row['id']}.")
 
-    pressed = st.button("Удалить текущие модели")
-    if pressed:
-        delete_all_models()
-        st.success("Текущие модели удалены.")
 else:
     st.info("Нет активных задач в фоновом режиме.")
