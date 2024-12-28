@@ -1,5 +1,6 @@
 import logging
 import multiprocessing
+from logging import StreamHandler
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
@@ -31,9 +32,8 @@ class AppConfig(BaseSettings):
 
 app_config = AppConfig()
 
-formatter = logging.Formatter(
-    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+file_formatter = logging.Formatter("%(asctime)s [%(levelname)s] - %(message)s")
+stream_formatter = logging.Formatter("%(levelname)s:\t  %(message)s")
 
 timed_handler = TimedRotatingFileHandler(
     app_config.log_file_path,
@@ -42,8 +42,13 @@ timed_handler = TimedRotatingFileHandler(
     backupCount=7
 )
 timed_handler.setLevel(logging.INFO)
-timed_handler.setFormatter(formatter)
+timed_handler.setFormatter(file_formatter)
+
+stream_handler = StreamHandler()
+stream_handler.setLevel(logging.INFO)
+stream_handler.setFormatter(stream_formatter)
 
 logger = logging.getLogger("toxic_comments_app")
 logger.setLevel(logging.INFO)
 logger.addHandler(timed_handler)
+logger.addHandler(stream_handler)
