@@ -10,6 +10,9 @@ from sklearn.metrics import f1_score
 import pandas as pd
 import os
 import logging
+import httpx
+from client import get_background_tasks
+import asyncio
 
 # Создаём папку для логов, если она не существует
 log_dir = "logs/frontend"
@@ -225,3 +228,7 @@ def learn_naive_bayes(data, alpha=1.0, fit_prior=True):
     except Exception as e:
         logging.info(f"Ошибка обучения Naive Bayes модели: {str(e)} Параметры: {model_params}")
         return None
+
+
+def map_background_tasks():
+    return asyncio.run(get_background_tasks())
