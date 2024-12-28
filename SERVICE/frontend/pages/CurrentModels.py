@@ -20,8 +20,11 @@ if df.empty is False:
         col4.write(row["Модель загружена"])
         pressed = col5.button("Выполнить", key=f"button_{row['id']}")
         if pressed:
-            delete_action(row["id"])
-            st.success(f"Модель удалена {row['id']}.")
+            err = delete_action(row["id"])
+            if err is not None:
+                st.error(f"Ошибка при удалении модели {row['id']}: {err}")
+            else:
+                st.success(f"Модель удалена {row['id']}.")
 
     pressed = st.button("Удалить текущие модели")
     if pressed:
