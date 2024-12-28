@@ -251,15 +251,20 @@ class TrainerService:
 
     async def remove_all_models(self) -> MessageResponse:
         """Remove all models."""
-        saved_model_file_paths = [
-            model_info.saved_model_file_path
-            for model_info in self.models.values()
+        model_to_remove_ids = [
+            model_id for model_id in self.models
+            if model_id not in DEFAULT_MODELS_INFO.keys()
         ]
-        self.models.clear()
-        self.loaded_models.clear()
-        for file_path in saved_model_file_paths:
-            if os.path.isfile(file_path):
-                os.remove(file_path)
+        for model_id in model_to_remove_ids:
+            model_info = self.models.get(model_id)
+            if model_info:
+                file_path = self.models[model_id].saved_model_file_path
+                self.models.pop(model_id, None)
+
+                if file_path and os.path.isfile(file_path):
+                    os.remove(file_path)
+
+            self.loaded_models.pop(model_id, None)
 
         return MessageResponse(
             message="Все модели, кроме моделей по умолчанию, удалены."
