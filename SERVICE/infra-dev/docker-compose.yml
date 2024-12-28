@@ -1,0 +1,26 @@
+version: '3'
+
+services:
+  backend:
+    image: levkh/toxic-comments-backend:latest
+    container_name: backend
+    restart: always
+    volumes:
+      - models_volume:/app/models
+      - logs_volume:/app/logs
+    env_file:
+      - ./.env
+    ports:
+      - "8000:8000"
+
+  #  frontend:
+  #    image: "${FRONTEND_IMAGE}"
+  #    container_name: frontend
+  #    volumes:
+  #      - media_volume:/app/media/
+  #    depends_on:
+  #      - backend
+
+volumes:
+  models_volume:
+  logs_volume:
