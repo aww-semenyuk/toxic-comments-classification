@@ -1,3 +1,5 @@
+import json
+
 import httpx
 from typing import List, Any
 from process_data import logging
@@ -5,7 +7,7 @@ from process_data import logging
 BASE_URL = "http://127.0.0.1:8000/api/v1"
 
 
-async def train_model(data, model_id: str = 'default_logistic', model_type: str = 'linear_svc'):
+async def train_model(data, model_id: str = 'default_logistic', model_type: str = 'linear_svc', model_params: dict = {}) -> None:
     """
     Отправка запроса на обучение модели.
     """
@@ -19,6 +21,7 @@ async def train_model(data, model_id: str = 'default_logistic', model_type: str 
                 "id": model_id,
                 "vectorizer_type": "bag_of_words",
                 "ml_model_type": model_type,
+                "ml_model_params": json.dumps(model_params)
             }
             response = await client.post(
                 f"{BASE_URL}/models/fit",

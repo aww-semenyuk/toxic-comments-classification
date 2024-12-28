@@ -1,5 +1,6 @@
 from datetime import datetime
-
+import hashlib
+import time
 from sklearn.svm import LinearSVC
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.model_selection import train_test_split
@@ -39,17 +40,39 @@ def is_data_correct(df):
     return {"toxic", "comment_text"}.issubset(df.columns)
 
 
+import hashlib
+import time
+
+def generate_random_hash():
+    """
+    Генерирует случайный хеш на основе текущего времени.
+
+    Returns:
+        str: Первые 8 символов хеша.
+    """
+    # Получение текущего времени в формате UNIX timestamp
+    current_time = str(time.time())
+
+    # Генерация хеша на основе времени
+    hash_object = hashlib.sha256(current_time.encode())
+    hash_id = hash_object.hexdigest()[:8]
+
+    return hash_id
+
+
 def learn_logistic_regression(data, penalty='none', C='1.0', solver='liblinear', max_iter=1000):
     model_params = {
         'penalty': penalty,
         'C': C,
         'solver': solver,
         'max_iter': max_iter,
-        'random_state': 42,
     }
 
+    hash_id = generate_random_hash()
+    model_id = f"{hash_id}_logistic"
+
     try:
-        asyncio.run(train_model(data))
+        asyncio.run(train_model(data, model_id=model_id, model_type='logistic_regression', model_params=model_params))
         return None
     except Exception as e:
         logging.info(f"Ошибка обучения logistic_regression модели: {str(e)} Параметры: {model_params}")
@@ -57,130 +80,45 @@ def learn_logistic_regression(data, penalty='none', C='1.0', solver='liblinear',
 
 
 def learn_LinearSVC_regression(data, C='1.0', penalty='l2', loss='squared_hinge', dual=True, class_weight=None, max_iter=1000):
+
+    model_params = {
+        'C': C,
+        'penalty': penalty,
+        'loss': loss,
+        'dual': dual,
+        'class_weight': class_weight,
+        'max_iter': max_iter
+    }
+
+    hash_id = generate_random_hash()
+    model_id = f"{hash_id}_linear_svc"
+
     try:
-        y = data['toxic']
-        X_raw = data.drop('toxic', axis=1)
-
-        model_params = {
-            'C': C,
-            'penalty': penalty,
-            'loss': loss,
-            'dual': dual,
-            'class_weight': class_weight,
-            'max_iter': max_iter,
-            'random_state': 42
-        }
-
-        if y.nunique() > 2:
-            y = pd.cut(y, bins=[-float('inf'), 0.5, float('inf')], labels=[0, 1])
-
-        cat_features_mask = (X_raw.dtypes == "object").values
-
-        X_train, X_test, y_train, y_test = train_test_split(X_raw, y, test_size=0.25, random_state=123)
-
-        # Преобразование числовых столбцов
-        numerical_transformer = Pipeline(steps=[
-            ('imputer', SimpleImputer(strategy='mean')),  # Замена пропусков на среднее
-            ('scaler', StandardScaler())  # Масштабирование признаков
-        ])
-
-        # Преобразование категориальных столбцов
-        categorical_transformer = Pipeline(steps=[
-            ('imputer', SimpleImputer(strategy='constant', fill_value='NA')),  # Замена пропусков на 'NA'
-            ('onehot', OneHotEncoder(handle_unknown='ignore'))  # OHE-кодирование
-        ])
-
-        # Объединяем преобразования с помощью ColumnTransformer
-        preprocessor = ColumnTransformer(
-            transformers=[
-                ('num', numerical_transformer, X_raw.columns[~cat_features_mask]),
-                ('cat', categorical_transformer, X_raw.columns[cat_features_mask])
-            ]
-        )
-
-        # Полный пайплайн с линейной регрессией
-        pipeline = Pipeline(steps=[
-            ('preprocessor', preprocessor),
-            ('classifier', LinearSVC(**model_params))
-        ])
-
-        # 3. Обучение модели
-        pipeline.fit(X_train, y_train)
-
-        # 4. Оценка модели
-        y_pred = pipeline.predict(X_test)
-        f1 = f1_score(y_test, y_pred)
-        accuracy = pipeline.score(X_test, y_test)
-
-        logging.info(f"Модель LinearSVC обучена. Параметры: {model_params}")
-        logging.info(f"f1 LinearSVC: {f1:.2f}")
-        logging.info(f"Точность модели: {accuracy:.2f}")
-
-        return f1, accuracy
+        asyncio.run(train_model(data, model_id=model_id, model_type='linear_svc', model_params=model_params))
+        return None
 
     except Exception as e:
         logging.info(f"Ошибка обучения LinearSVC модели: {str(e)} Параметры: {model_params}")
-        return None, None
+        return True
 
 
 def learn_naive_bayes(data, alpha=1.0, fit_prior=True):
+
+    # Параметры модели MultinomialNB
+    model_params = {
+        'alpha': alpha,  # Параметр сглаживания
+        'fit_prior': fit_prior  # Признак, указывающий следует ли использовать предположения о вероятностностях принадлежности к классам
+    }
+
+    hash_id = generate_random_hash()
+    model_id = f"{hash_id}_naive_bayes"
+
     try:
-        y = data['toxic']
-        X_raw = data.drop('toxic', axis=1)
-
-        # Параметры модели MultinomialNB
-        model_params = {
-            'alpha': alpha,  # Параметр сглаживания
-            'fit_prior': fit_prior  # Признак, указывающий следует ли использовать предположения о вероятностностях принадлежности к классам
-        }
-
-        # Преобразование целевой переменной (бинаризация, если необходимо)
-        if y.nunique() > 2:
-            y = pd.cut(y, bins=[-float('inf'), 0.5, float('inf')], labels=[0, 1])
-
-        cat_features_mask = (X_raw.dtypes == "object").values
-
-        X_train, X_test, y_train, y_test = train_test_split(X_raw, y, test_size=0.25, random_state=123)
-
-        numerical_transformer = Pipeline(steps=[
-            ('imputer', SimpleImputer(strategy='mean')),  # Замена пропусков на среднее значение
-            ('scaler', StandardScaler())  # Масштабирование признаков
-        ])
-
-        categorical_transformer = Pipeline(steps=[
-            ('imputer', SimpleImputer(strategy='constant', fill_value='NA')),  # Замена пропусков на 'NA'
-            ('onehot', OneHotEncoder(handle_unknown='ignore'))  # One-hot кодирование
-        ])
-
-        # Объединяем преобразования с помощью ColumnTransformer
-        preprocessor = ColumnTransformer(
-            transformers=[
-                ('cat', categorical_transformer, X_raw.columns[cat_features_mask])  # Для категориальных признаков
-            ]
-        )
-
-        pipeline = Pipeline(steps=[
-            ('preprocessor', preprocessor),
-            ('classifier', MultinomialNB(**model_params))  # Используем MultinomialNB
-        ])
-
-        # Обучаем модель
-        pipeline.fit(X_train, y_train)
-
-        # Оценка модели
-        y_pred = pipeline.predict(X_test)
-        f1 = f1_score(y_test, y_pred)
-        accuracy = pipeline.score(X_test, y_test)
-
-        logging.info(f"Модель Naive Bayes (MultinomialNB) обучена. Параметры: {model_params}")
-        logging.info(f"f1 Naive Bayes (MultinomialNB): {f1:.2f}")
-        logging.info(f"accuracy Naive Bayes (MultinomialNB): {accuracy:.2f}")
-
-        return f1, accuracy
-
+        asyncio.run(train_model(data, model_id=model_id, model_type='multinomial_naive_bayes', model_params=model_params))
+        return None
     except Exception as e:
         logging.info(f"Ошибка обучения Naive Bayes модели: {str(e)} Параметры: {model_params}")
-        return None
+        return True
 
 
 def map_background_tasks() -> pd.DataFrame:

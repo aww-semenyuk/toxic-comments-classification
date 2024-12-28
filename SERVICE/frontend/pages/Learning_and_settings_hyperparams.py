@@ -47,22 +47,16 @@ if model:
                     st.error('Ошибка при обучении модели.')
 
             if model == 'SVC':
-                f1_score, accuracy = learn_LinearSVC_regression(shared_data, C, penalty, loss, dual, class_weight, max_iter)
-                if f1_score is not None and accuracy is not None:
-                    st.write(f'F1-score: {f1_score:.2f}')
-                    st.write(f'Accuracy: {accuracy:.2f}')
-                    st.session_state['results']['SVC'] = {'F1-score': f"{f1_score:.2f}", 'Accuracy': accuracy}
+                err = learn_LinearSVC_regression(zipped_csv, C, penalty, loss, dual, class_weight, max_iter)
+                if err is None:
                     st.success('Модель обучена.')
                 else:
                     st.error('Ошибка при обучении модели.')
 
 
             if model == 'Naive Bayes':
-                f1_score, accuracy = learn_naive_bayes(shared_data, alpha, fit_prior)
-                if accuracy is not None:
-                    st.write(f'F1-score: {f1_score:.2f}')
-                    st.write(f'Accuracy: {accuracy:.2f}')
-                    st.session_state['results']['Naive Bayes'] = {'F1-score': f1_score, 'Accuracy': accuracy}
+                err = learn_naive_bayes(zipped_csv, alpha, fit_prior)
+                if err is None:
                     st.success('Модель обучена.')
                 else:
                     st.error('Ошибка при обучении модели.')
