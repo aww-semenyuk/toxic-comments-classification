@@ -4,6 +4,7 @@ WORKDIR /app
 COPY . .
 
 RUN apt-get update && \
+    apt-get install -y curl &&\
     apt-get install -y --no-install-recommends build-essential gcc g++ libffi-dev libssl-dev && \
     rm -rf /var/lib/apt/lists/*
 

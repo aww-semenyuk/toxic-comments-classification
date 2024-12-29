@@ -2,7 +2,9 @@ version: '3'
 
 services:
   backend:
-    image: levkh/toxic-comments-backend:latest
+    build:
+      context: ../backend/
+      dockerfile: Dockerfile
     container_name: backend
     restart: always
     volumes:
@@ -12,14 +14,31 @@ services:
       - ./.env
     ports:
       - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
-  #  frontend:
-  #    image: "${FRONTEND_IMAGE}"
-  #    container_name: frontend
-  #    volumes:
-  #      - media_volume:/app/media/
-  #    depends_on:
-  #      - backend
+  frontend:
+    build:
+      context: ../frontend/
+      dockerfile: Dockerfile
+    container_name: frontend
+    restart: always
+    ports:
+      - "8501:8501"
+    environment:
+      - BACKEND_URL=http://backend:8000
+    volumes:
+      - logs_volume:/app/logs/frontend
+      - ../frontend:/app
+    depends_on:
+      backend:
+        condition: service_healthy
+    deploy:
+      update_config:
+        delay: 5s
 
 volumes:
   models_volume:
