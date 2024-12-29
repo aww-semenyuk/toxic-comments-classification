@@ -82,17 +82,21 @@ async def unload_model(model_id: str) -> bool:
             return True
 
 
-async def predict_model(client: httpx.AsyncClient, id: str, X: List[List[float]]):
+async def predict_model(id: str, X: List[Any]) -> Any:
     """
     Predict модели.
     """
     logging.info("predict_model - Predict модели...")
-    try:
-        response = await client.post(f"{BASE_URL}/predict", json={"id": "linear_1231", "X": X})
-        response.raise_for_status()
-        logging.info(f"Predict Модели {id}: {response.json()}")
-    except httpx.HTTPStatusError as e:
-        logging.info(f"Ошибка при Predict модели {id}: {e.response.json()}")
+    data_json = {"X": X}
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(f"{BASE_URL}/models/predict/{id}", json=data_json)
+            response.raise_for_status()
+            logging.info(f"Predict Модели {id}: {response.json()}")
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            logging.info(f"Ошибка при Predict модели {id}: {e.response.json()}")
+            return None
 
 
 async def remove_model(id: str) -> bool:
