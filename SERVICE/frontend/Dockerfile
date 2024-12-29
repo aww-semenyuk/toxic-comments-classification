@@ -6,7 +6,12 @@ COPY requirements.txt .
 
 RUN apt-get update && apt-get install -y && \
     pip install -r requirements.txt --no-cache-dir && \
-    python -m nltk.downloader stopwords wordnet punkt averaged_perceptron_tagger
+    python -c "import nltk; nltk.download('stopwords'); \
+                            nltk.download('punkt'); \
+                            nltk.download('punkt_tab'); \
+                            nltk.download('wordnet'); \
+                            nltk.download('averaged_perceptron_tagger'); \
+                            nltk.download('averaged_perceptron_tagger_eng');"
 
 COPY . .
 
