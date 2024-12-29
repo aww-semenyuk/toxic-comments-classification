@@ -6,6 +6,9 @@ from utils_func.process_data import (
     load_model_action,
     unload_model_action
 )
+from logger_config import get_logger
+
+logger = get_logger()
 
 st.title("Управление текущими моделями")
 

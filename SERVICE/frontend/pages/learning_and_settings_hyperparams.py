@@ -6,6 +6,9 @@ from utils_func.process_data import (
     learn_LinearSVC_regression,
     learn_naive_bayes
 )
+from logger_config import get_logger
+
+logger = get_logger()
 
 st.header('Обучение модели')
 zipped_csv = None

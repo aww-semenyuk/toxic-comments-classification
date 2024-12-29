@@ -3,13 +3,13 @@ from typing import Any
 
 import pandas as pd
 
-import logging
 import asyncio
 import zipfile
 import io
 import hashlib
 import time
 
+from logger_config import get_logger
 from utils_func.client import (
     get_background_tasks,
     train_model,
@@ -21,6 +21,8 @@ from utils_func.client import (
     predict_model,
     predict_scores_model
 )
+
+logger = get_logger()
 
 
 def is_data_correct(df):
@@ -83,7 +85,7 @@ def learn_logistic_regression(
         )
         return None
     except Exception as e:
-        logging.info(
+        logger.error(
             f"Ошибка обучения logistic_regression модели: err:{str(e)} "
             f"Параметры: {model_params}")
         return True
@@ -125,7 +127,7 @@ def learn_LinearSVC_regression(
         return None
 
     except Exception as e:
-        logging.info(
+        logger.error(
             f"Ошибка обучения LinearSVC модели err:{str(e)} "
             f"Параметры: {model_params}"
         )
@@ -160,7 +162,7 @@ def learn_naive_bayes(
         )
         return None
     except Exception as e:
-        logging.info(
+        logger.error(
             f"Ошибка обучения Naive Bayes модели err:{str(e)} "
             f"Параметры: {model_params}"
         )
