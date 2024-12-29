@@ -198,7 +198,7 @@ async def get_background_tasks() -> List[Any]:
     Запрос на получение всех background_tasks.
     """
     logging.info("get_background_tasks - Получение всех background_tasks")
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=60.0) as client:
         try:
             response = await client.get(f"{BASE_URL}/tasks/")
             response.raise_for_status()

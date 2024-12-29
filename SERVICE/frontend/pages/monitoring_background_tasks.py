@@ -1,5 +1,10 @@
+# Мониторинг фоновых задач
 import streamlit as st
 from utils_func.process_data import map_background_tasks
+
+st.set_page_config(
+    page_title="Мониторинг фоновых задач",
+)
 
 st.title("Мониторинг фоновых задач")
 

@@ -10,7 +10,7 @@ import io
 import hashlib
 import time
 
-from client import (
+from utils_func.client import (
     get_background_tasks,
     train_model,
     get_list_models,
