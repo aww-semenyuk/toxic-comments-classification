@@ -2,12 +2,14 @@ version: '3'
 
 services:
   backend:
+    platform: linux/amd64
     build:
       context: ../backend/
       dockerfile: Dockerfile
     container_name: backend
     restart: always
     volumes:
+      - ../backend/:/app
       - models_volume:/app/models
       - logs_volume:/app/logs
     env_file:
@@ -18,9 +20,11 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8000/"]
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 3
+      start_period: 10s
 
   frontend:
+    platform: linux/amd64
     build:
       context: ../frontend/
       dockerfile: Dockerfile
@@ -31,14 +35,11 @@ services:
     environment:
       - BACKEND_URL=http://backend:8000
     volumes:
-      - logs_volume:/app/logs/frontend
+      - logs_volume:/app/logs
       - ../frontend:/app
     depends_on:
       backend:
         condition: service_healthy
-    deploy:
-      update_config:
-        delay: 5s
 
 volumes:
   models_volume:
