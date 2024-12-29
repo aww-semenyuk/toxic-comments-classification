@@ -4,6 +4,11 @@ import streamlit as st
 from pandarallel import pandarallel
 import nltk
 
+# nltk.download("stopwords")
+# nltk.download("wordnet")
+# nltk.download("punkt")
+# nltk.download('averaged_perceptron_tagger')
+
 import string
 import plotly.subplots as sp
 import plotly.graph_objects as go
@@ -19,8 +24,6 @@ import base64
 import io
 import random
 
-from nltk.stem import WordNetLemmatizer
-from nltk.tokenize import TweetTokenizer
 from nltk.corpus import stopwords
 
 import sys
@@ -252,9 +255,9 @@ if 'shared_data' in st.session_state:
 if shared_data is not None:
     start_time = time()
     data = shared_data
-
     st.markdown('Количество записей: {}'.format(len(data)))
     st.markdown('Количество уникальных комментариев: {}'.format(data['comment_text'].nunique()))
+    data = data.drop_duplicates(subset='comment_text')
     logging.info('Запуск EDA по датасету')
 
     data[['text_length', 'num_words', 'num_sent', 'num_punct']] = (
@@ -434,7 +437,7 @@ if shared_data is not None:
                 buttons=buttons,
                 direction="down",
                 showactive=True,
-                x=1.165,
+                x=1.22,
                 y=1.12
             )
         ],
@@ -525,7 +528,7 @@ if shared_data is not None:
                 source=ordinary_wc,
                 xref="paper", yref="paper",
                 x=0.0, y=0.1,
-                sizex=0.7, sizey=0.4,
+                sizex=0.5, sizey=0.4,
                 xanchor="left", yanchor="bottom",
                 layer="above"
             ),
@@ -533,7 +536,7 @@ if shared_data is not None:
                 source=toxic_wc,
                 xref="paper", yref="paper",
                 x=0.55, y=0.1,
-                sizex=0.7, sizey=0.4,
+                sizex=0.5, sizey=0.4,
                 xanchor="left", yanchor="bottom",
                 layer="above"
             )
