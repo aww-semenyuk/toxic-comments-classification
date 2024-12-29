@@ -1,5 +1,11 @@
 import streamlit as st
-from process_data import map_current_models, delete_all_models, delete_action, load_model_action, unload_model_action
+from utils_func.process_data import (
+    map_current_models,
+    delete_all_models,
+    delete_action,
+    load_model_action,
+    unload_model_action
+)
 
 st.title("Управление текущими моделями")
 
@@ -11,7 +17,14 @@ if df.empty is False:
         delete_all_models()
         st.success("Текущие модели удалены.")
     st.divider()
-    header_col1, header_col2, header_col3, header_col4, header_col5 = st.columns([2, 3, 2, 2, 2])
+    (
+        header_col1,
+        header_col2,
+        header_col3,
+        header_col4,
+        header_col5,
+    ) = st.columns([2, 3, 2, 2, 2])
+
     header_col1.write("**ID**")
     header_col2.write("**Тип модели**")
     header_col3.write("**Модель обучена**")
@@ -23,7 +36,9 @@ if df.empty is False:
         col2.write(row["Тип модели"])
         col3.write(row["Модель обучена"])
         if row["Модель загружена"] is True:
-            pressed_unload = col4.button("Выгрузить модель", key=f"button_unload_{row['id']}")
+            pressed_unload = col4.button(
+                "Выгрузить модель", key=f"button_unload_{row['id']}"
+            )
             if pressed_unload:
                 err = unload_model_action(row["id"])
                 if err is not None:
@@ -31,7 +46,9 @@ if df.empty is False:
                 else:
                     st.success(f"Модель выгружена {row['id']}.")
         else:
-            pressed_load = col4.button("Загрузить модель", key=f"button_load_{row['id']}")
+            pressed_load = col4.button(
+                "Загрузить модель", key=f"button_load_{row['id']}"
+            )
             if pressed_load:
                 err = load_model_action(row["id"])
                 if err is not None:
@@ -43,7 +60,9 @@ if df.empty is False:
         if pressed:
             err = delete_action(row["id"])
             if err is not None:
-                st.error(f"Ошибка при удалении модели {row['id']}: {err}")
+                st.error(
+                    f"Ошибка при удалении модели id: {row['id']} err: {err}"
+                )
             else:
                 st.success(f"Модель удалена {row['id']}.")
 

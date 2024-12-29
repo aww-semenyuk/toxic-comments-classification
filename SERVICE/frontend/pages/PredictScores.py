@@ -1,5 +1,5 @@
 import streamlit as st
-from process_data import map_current_models, predict_scores_action
+from utils_func.process_data import map_current_models, predict_scores_action
 from sklearn.metrics import roc_curve, auc
 import matplotlib.pyplot as plt
 
@@ -22,20 +22,33 @@ if not df.empty:
     if pressed_predict or "roc_curves_data" in st.session_state:
         if pressed_predict:
             if len(selected_models) > 0:
-                res_scores_df = predict_scores_action(selected_models, st.session_state['zipped_csv'])
+                res_scores_df = predict_scores_action(
+                    selected_models, st.session_state['zipped_csv']
+                )
 
-                if 'y_true' in res_scores_df.columns and 'scores' in res_scores_df.columns:
-                    # Сохраняем данные ROC-кривых в session_state
+                if ('y_true' in res_scores_df.columns
+                        and 'scores' in res_scores_df.columns):
+
                     st.session_state["roc_curves_data"] = {
                         model_id: {
-                            "y_true": res_scores_df[res_scores_df['model_id'] == model_id]['y_true'],
-                            "scores": res_scores_df[res_scores_df['model_id'] == model_id]['scores']
+                            "y_true":
+                                res_scores_df[
+                                    res_scores_df['model_id'] == model_id
+                                ]['y_true'],
+                            "scores":
+                                res_scores_df[
+                                    res_scores_df['model_id'] == model_id
+                                ]['scores']
                         }
                         for model_id in selected_models
                     }
 
                 else:
-                    st.error("Невозможно построить ROC-кривую: отсутствуют необходимые данные.")
+                    st.error(
+                        "Невозможно "
+                        "построить ROC-кривую: "
+                        "отсутствуют необходимые данные."
+                    )
             else:
                 st.error("Выберите хотя бы одну модель.")
 
@@ -46,7 +59,9 @@ if not df.empty:
             # Словарь для управления видимостью моделей
             visibility = {}
             for model_id in roc_curves_data.keys():
-                visibility[model_id] = st.checkbox(f"Показать ROC для модели id-{model_id}", value=True)
+                visibility[model_id] = st.checkbox(
+                    f"Показать ROC для модели id-{model_id}", value=True
+                )
 
             plt.figure(figsize=(8, 6))  # Настройка размера окна для графиков
 
@@ -57,7 +72,12 @@ if not df.empty:
                     roc_auc = auc(fpr, tpr)
 
                     # Визуализация ROC-кривой
-                    plt.plot(fpr, tpr, lw=2, label=f'Model id-{model_id} (AUC = {roc_auc:.2f})')
+                    plt.plot(
+                        fpr,
+                        tpr,
+                        lw=2,
+                        label=f'Model id-{model_id} (AUC = {roc_auc:.2f})'
+                    )
 
             # Общие элементы графика
             plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')

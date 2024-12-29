@@ -1,5 +1,5 @@
 import streamlit as st
-from process_data import map_background_tasks
+from utils_func.process_data import map_background_tasks
 
 st.title("Мониторинг фоновых задач")
 
