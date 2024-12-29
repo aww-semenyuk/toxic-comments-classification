@@ -10,6 +10,24 @@ active_processes = multiprocessing.Value('i', 1)
 
 BASE_DIR = Path(__file__).parent.parent.resolve()
 MODELS_DIR = BASE_DIR / "models"
+LOG_FILE_PATH = BASE_DIR / 'logs' / 'backend' / 'backend.log'
+
+formatter = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+
+timed_handler = TimedRotatingFileHandler(
+    LOG_FILE_PATH,
+    when="midnight",
+    interval=1,
+    backupCount=7
+)
+timed_handler.setLevel(logging.INFO)
+timed_handler.setFormatter(formatter)
+
+logger = logging.getLogger("toxic_comments_app")
+logger.setLevel(logging.INFO)
+logger.addHandler(timed_handler)
 
 
 class AppConfig(BaseSettings):
@@ -18,7 +36,6 @@ class AppConfig(BaseSettings):
     cores_cnt: conint(gt=1) = 2
     models_max_cnt: int = 2
     max_saved_bg_tasks: conint(gt=2) = 10
-    log_file_path: Path = Path(BASE_DIR / 'logs' / 'backend.log')
 
     model_config = SettingsConfigDict(env_file='.env')
 
@@ -30,20 +47,3 @@ class AppConfig(BaseSettings):
 
 
 app_config = AppConfig()
-
-formatter = logging.Formatter(
-    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-
-timed_handler = TimedRotatingFileHandler(
-    app_config.log_file_path,
-    when="midnight",
-    interval=1,
-    backupCount=7
-)
-timed_handler.setLevel(logging.INFO)
-timed_handler.setFormatter(formatter)
-
-logger = logging.getLogger("toxic_comments_app")
-logger.setLevel(logging.INFO)
-logger.addHandler(timed_handler)
