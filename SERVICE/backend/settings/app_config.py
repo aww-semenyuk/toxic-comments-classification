@@ -20,7 +20,8 @@ timed_handler = TimedRotatingFileHandler(
     LOG_FILE_PATH,
     when="midnight",
     interval=1,
-    backupCount=7
+    backupCount=7,
+    delay=True
 )
 timed_handler.setLevel(logging.INFO)
 timed_handler.setFormatter(file_formatter)
@@ -42,7 +43,7 @@ class AppConfig(BaseSettings):
     models_max_cnt: int = 2
     max_saved_bg_tasks: conint(gt=2) = 10
 
-    model_config = SettingsConfigDict(env_file='.env')
+    model_config = SettingsConfigDict(env_file='.env', extra='ignore')
 
     @field_validator('cores_cnt', mode='before')
     def set_cores_cnt(cls, v):
