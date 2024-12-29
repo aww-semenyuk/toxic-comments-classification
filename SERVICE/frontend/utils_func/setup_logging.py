@@ -2,7 +2,10 @@ import os
 import logging
 
 
-def setup_logging(log_dir: str = "logs/frontend", log_file_name: str = "app.log"):
+def setup_logging(
+        log_dir: str = "logs/frontend",
+        log_file_name: str = "app.log"
+):
     """
     Настраивает логирование с записью в файл и выводом в консоль.
 

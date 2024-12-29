@@ -7,7 +7,9 @@ from utils_func.process_data import (
 )
 from utils_func.setup_logging import setup_logging
 
-st.title('Приложение для анализа и визуализации данных о токсичных комментариев')
+st.title(
+    'Приложение для анализа и визуализации данных о токсичных комментариев'
+)
 st.header('Загрузите файл с комментариями')
 
 
@@ -20,13 +22,17 @@ def load_data(filepath):
 # Запуск настроек логирования
 setup_logging()
 
-uploaded_file = st.file_uploader('Загрузите файл файл с комментариями', type=['csv'])
+uploaded_file = st.file_uploader(
+    'Загрузите файл файл с комментариями',
+    type=['csv']
+)
 
 if uploaded_file is not None:
     data = load_data(uploaded_file)
     if is_data_correct(data) is False:
         st.error(
-            'Необходимые столбцы: toxic и comment_text - отсутствуют в вашем файле.'
+            'Необходимые столбцы: toxic и comment_text'
+            ' - отсутствуют в вашем файле.'
         )
     else:
         st.dataframe(data)

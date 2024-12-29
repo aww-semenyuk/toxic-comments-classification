@@ -73,7 +73,10 @@ class PreprocessLemmaTokenizer:
         return [
             self.wnl.lemmatize(token, pos=self._get_wordnet_pos(pos_tag))
             for token, pos_tag in pos_tags
-            if token.lower() not in self.stopwords and token not in self.punctuation
+            if (
+                    token.lower() not in self.stopwords
+                    and token not in self.punctuation
+            )
         ]
 
 
@@ -404,7 +407,8 @@ if shared_data is not None:
                 text=(
                     f"Ordinary:\nMean: {non_toxic_stats['mean']:.2f}, "
                     f"Median: {non_toxic_stats['median']:.2f}, "
-                    f"Max: {non_toxic_stats['max']}, Min: {non_toxic_stats['min']}"
+                    f"Max: {non_toxic_stats['max']}, "
+                    f"Min: {non_toxic_stats['min']}"
                 ),
                 font=dict(size=12),
                 align="center"
@@ -495,12 +499,18 @@ if shared_data is not None:
 
     for i, (ngram_type, freqs) in enumerate(data_wf.items()):
         ordinary_df = (
-            pd.DataFrame(list(freqs["ordinary"].items()), columns=["word", "count"])
+            pd.DataFrame(
+                list(freqs["ordinary"].items()),
+                columns=["word", "count"]
+            )
             .sort_values(by="count", ascending=False)
             .head(30)
         )
         toxic_df = (
-            pd.DataFrame(list(freqs["toxic"].items()), columns=["word", "count"])
+            pd.DataFrame(
+                list(freqs["toxic"].items()),
+                columns=["word", "count"]
+            )
             .sort_values(by="count", ascending=False)
             .head(30)
         )

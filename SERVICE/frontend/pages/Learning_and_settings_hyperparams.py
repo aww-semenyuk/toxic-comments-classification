@@ -18,7 +18,8 @@ if 'zipped_csv' in st.session_state:
     zipped_csv = st.session_state['zipped_csv']
 if zipped_csv is not None:
     model = st.selectbox(
-        "Выберите модель для обучение", ['Logistic Regression', 'SVC', 'Naive Bayes']
+        "Выберите модель для обучение",
+        ['Logistic Regression', 'SVC', 'Naive Bayes']
     )
 
     if model == 'Logistic Regression':
@@ -32,7 +33,9 @@ if zipped_csv is not None:
             value=1.0,
             step=0.1
         )
-        solver = st.selectbox("Solver (Оптимизация)", ['liblinear', 'lbfgs', 'saga'])
+        solver = st.selectbox(
+            "Solver (Оптимизация)", ['liblinear', 'lbfgs', 'saga']
+        )
         max_iter = st.slider(
             "Max Iter (Итерации)",
             min_value=100,
@@ -50,13 +53,18 @@ if zipped_csv is not None:
             step=0.1
         )
         penalty = st.selectbox("Penalty (Регуляризация)", ['l2', 'l1'])
-        loss = st.selectbox("Loss (Функция потерь)", ['squared_hinge', 'hinge'])
+        loss = st.selectbox(
+            "Loss (Функция потерь)", ['squared_hinge', 'hinge']
+        )
         dual = (
             st.checkbox("Решение двойственной задачи (Dual)", value=True)
             if penalty == "l2"
             else False
         )
-        class_weight = st.selectbox("Class Weight (Вес классов)", [None, 'balanced'])
+        class_weight = st.selectbox(
+            "Class Weight (Вес классов)",
+            [None, 'balanced']
+        )
         max_iter = st.slider(
             "Max Iter (Максимум итераций)",
             min_value=100,
@@ -82,7 +90,13 @@ if model:
     pressed = st.button('Обучить модель')
     if pressed:
         if model == 'Logistic Regression':
-            err = learn_logistic_regression(zipped_csv, penalty, C, solver, max_iter)
+            err = learn_logistic_regression(
+                zipped_csv,
+                penalty,
+                C,
+                solver,
+                max_iter
+            )
             if err is None:
                 st.success('Модель обучена.')
             else:
@@ -111,7 +125,9 @@ if model:
                 st.error('Ошибка при обучении модели.')
 
 else:
-    st.write('Для обучения модели необходимо загрузить данные во вкладке "Main"')
+    st.write(
+        'Для обучения модели необходимо загрузить данные во вкладке "Main"'
+    )
 
 # Отображение общего графика
 if st.session_state['results']:

@@ -59,7 +59,6 @@ async def get_list_models():
         try:
             response = await client.get(f"{BASE_URL}/models/")
             response.raise_for_status()
-            logging.info(f"get_list_models - Список моделей: {response.json()}")
             return response.json()
         except httpx.HTTPStatusError as e:
             logging.info(
@@ -144,7 +143,9 @@ async def predict_scores_model(ids: str, zipped_csv: Any) -> Any:
     async with httpx.AsyncClient(timeout=60.0) as client:
         try:
             response = await client.post(
-                f"{BASE_URL}/models/predict_scores/", data={"ids": ids}, files=files
+                f"{BASE_URL}/models/predict_scores/",
+                data={"ids": ids},
+                files=files
             )
             response.raise_for_status()
             csv_content = response.content
@@ -204,6 +205,7 @@ async def get_background_tasks() -> List[Any]:
             return response.json()
         except httpx.HTTPStatusError as e:
             logging.info(
-                f"Ошибка при получении всех background_tasks: {e.response.json()}"
+                f"Ошибка при получении всех background_tasks"
+                f" err: {e.response.json()}"
             )
             return []
