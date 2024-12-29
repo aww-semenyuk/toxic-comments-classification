@@ -4,6 +4,7 @@ from utils_func.process_data import (
     is_data_correct,
     logging,
     create_zip_from_csv,
+    format_df,
 )
 from utils_func.setup_logging import setup_logging
 
@@ -35,7 +36,8 @@ if uploaded_file is not None:
             ' - отсутствуют в вашем файле.'
         )
     else:
-        st.dataframe(data)
+        df_to_display = format_df(data)
+        st.dataframe(df_to_display)
 
         st.session_state['shared_data'] = data
         zip_data = create_zip_from_csv(uploaded_file, uploaded_file.name)
@@ -44,4 +46,4 @@ if uploaded_file is not None:
 
 
 else:
-    st.write('Файл не выбран.')
+    st.write('Файл не загружен.')
