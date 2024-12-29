@@ -58,7 +58,8 @@ def learn_logistic_regression(
         penalty='none',
         C='1.0',
         solver='liblinear',
-        max_iter=1000
+        max_iter=1000,
+        vectorizer_type='bag_of_words',
 ):
     model_params = {
         'penalty': penalty,
@@ -76,7 +77,8 @@ def learn_logistic_regression(
                 data,
                 model_id=model_id,
                 model_type='logistic_regression',
-                model_params=model_params
+                model_params=model_params,
+                vectorizer_type=vectorizer_type
             )
         )
         return None
@@ -94,7 +96,8 @@ def learn_LinearSVC_regression(
         loss='squared_hinge',
         dual=True,
         class_weight=None,
-        max_iter=1000
+        max_iter=1000,
+        vectorizer_type='bag_of_words'
 ):
 
     model_params = {
@@ -115,7 +118,8 @@ def learn_LinearSVC_regression(
                 data,
                 model_id=model_id,
                 model_type='linear_svc',
-                model_params=model_params
+                model_params=model_params,
+                vectorizer_type=vectorizer_type
             )
         )
         return None
@@ -128,7 +132,12 @@ def learn_LinearSVC_regression(
         return True
 
 
-def learn_naive_bayes(data, alpha=1.0, fit_prior=True):
+def learn_naive_bayes(
+        data,
+        alpha=1.0,
+        fit_prior=True,
+        vectorizer_type='bag_of_words'
+):
 
     # Параметры модели MultinomialNB
     model_params = {
@@ -145,7 +154,8 @@ def learn_naive_bayes(data, alpha=1.0, fit_prior=True):
                 data,
                 model_id=model_id,
                 model_type='multinomial_naive_bayes',
-                model_params=model_params
+                model_params=model_params,
+                vectorizer_type=vectorizer_type
             )
         )
         return None

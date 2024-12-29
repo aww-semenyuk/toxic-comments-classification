@@ -13,7 +13,9 @@ async def train_model(
         data,
         model_id: str = 'default_logistic',
         model_type: str = 'linear_svc',
-        model_params: dict = {}) -> None:
+        model_params: dict = {},
+        vectorizer_type: str = 'bag_of_words',
+) -> None:
     """
     Отправка запроса на обучение модели.
     """
@@ -29,7 +31,7 @@ async def train_model(
             }
             data = {
                 "id": model_id,
-                "vectorizer_type": "bag_of_words",
+                "vectorizer_type": vectorizer_type,
                 "ml_model_type": model_type,
                 "ml_model_params": json.dumps(model_params)
             }

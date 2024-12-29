@@ -16,10 +16,16 @@ if 'results' not in st.session_state:
 
 if 'zipped_csv' in st.session_state:
     zipped_csv = st.session_state['zipped_csv']
+
 if zipped_csv is not None:
     model = st.selectbox(
         "Выберите модель для обучение",
         ['Logistic Regression', 'SVC', 'Naive Bayes']
+    )
+
+    vectorizer_type = st.selectbox(
+        "Выберите векторизацию текста",
+        ['tf_idf', 'bag_of_words']
     )
 
     if model == 'Logistic Regression':
@@ -91,11 +97,12 @@ if model:
     if pressed:
         if model == 'Logistic Regression':
             err = learn_logistic_regression(
-                zipped_csv,
-                penalty,
-                C,
-                solver,
-                max_iter
+                data=zipped_csv,
+                penalty=penalty,
+                C=C,
+                solver=solver,
+                max_iter=max_iter,
+                vectorizer_type=vectorizer_type,
             )
             if err is None:
                 st.success('Модель обучена.')
@@ -104,13 +111,14 @@ if model:
 
         if model == 'SVC':
             err = learn_LinearSVC_regression(
-                zipped_csv,
-                C,
-                penalty,
-                loss,
-                dual,
-                class_weight,
-                max_iter
+                data=zipped_csv,
+                C=C,
+                penalty=penalty,
+                loss=loss,
+                dual=dual,
+                class_weight=class_weight,
+                max_iter=max_iter,
+                vectorizer_type=vectorizer_type
             )
             if err is None:
                 st.success('Модель обучена.')
@@ -118,7 +126,12 @@ if model:
                 st.error('Ошибка при обучении модели.')
 
         if model == 'Naive Bayes':
-            err = learn_naive_bayes(zipped_csv, alpha, fit_prior)
+            err = learn_naive_bayes(
+                data=zipped_csv,
+                alpha=alpha,
+                fit_prior=fit_prior,
+                vectorizer_type=vectorizer_type
+            )
             if err is None:
                 st.success('Модель обучена.')
             else:
