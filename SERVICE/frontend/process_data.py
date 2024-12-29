@@ -4,12 +4,13 @@ from typing import Any
 import pandas as pd
 import os
 import logging
-from client import get_background_tasks, train_model, get_list_models, remove_all_models, remove_model, load_model, unload_model, predict_model
 import asyncio
 import zipfile
 import io
 import hashlib
 import time
+
+from client import get_background_tasks, train_model, get_list_models, remove_all_models, remove_model, load_model, unload_model, predict_model, predict_scores_model
 
 # Создаём папку для логов, если она не существует
 log_dir = "logs/frontend"
@@ -189,4 +190,11 @@ def predict_action(model_id, text) -> Any:
     res = asyncio.run(predict_model(model_id, [formatted_text]))
     if res is not None and res.get('predictions') is not None:
         return res.get('predictions')[0]
+    return None
+
+def predict_scores_action(models_id, zipped_csv) -> Any:
+    models_id_str = ",".join(map(str, models_id))
+    csv_file = asyncio.run(predict_scores_model(models_id_str, zipped_csv))
+    if csv_file is not None:
+        return pd.read_csv(csv_file)
     return None
