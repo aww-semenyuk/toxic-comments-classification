@@ -1,5 +1,6 @@
 import streamlit as st
-from process_data import map_current_models, delete_all_models, delete_action, load_model_action, unload_model_action, predict_action
+from process_data import map_current_models, predict_action
+from sklearn.metrics import roc_curve, auc
 
 st.title("Получение предсказанных значение и оценка")
 

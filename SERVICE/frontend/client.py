@@ -1,3 +1,4 @@
+import io
 import json
 
 import httpx
@@ -95,7 +96,27 @@ async def predict_model(id: str, X: List[Any]) -> Any:
             logging.info(f"Predict Модели {id}: {response.json()}")
             return response.json()
         except httpx.HTTPStatusError as e:
-            logging.info(f"Ошибка при Predict модели {id}: {e.response.json()}")
+            logging.info(f"Ошибка при Predict модели id:{id} X:{X} err: {e.response.json()}")
+            return None
+
+
+async def predict_scores_model(id: str, zipped_csv: Any) -> Any:
+    """
+    Predict модели.
+    """
+    logging.info(f"predict_scores_model id-{id}")
+    files = {
+        "predict_file": ("archive.zip", zipped_csv, "application/zip")
+    }
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(f"{BASE_URL}/models/predict_scores/{id}", files=files)
+            response.raise_for_status()
+            csv_content = response.content
+            csv_data = io.BytesIO(csv_content)
+            return csv_data
+        except httpx.HTTPStatusError as e:
+            logging.info(f"Ошибка при Predict Scores модели id:{id} err: {e.response}")
             return None
 
 
