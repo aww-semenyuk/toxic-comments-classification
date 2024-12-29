@@ -1,3 +1,4 @@
+import os
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import asynccontextmanager
 
@@ -10,13 +11,15 @@ from api.v1.background_tasks import router as background_tasks_router
 from api.v1.trainer import router as trainer_router
 from serializers.trainer import MLModel
 from serializers.utils.trainer import serialize_params
-from settings.app_config import logger, app_config, MODELS_DIR
+from settings.app_config import logger, app_config, MODELS_DIR, LOG_FILE_PATH
 from store import loaded_models, models, DEFAULT_MODELS_INFO
 
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     """Context manager for the lifespan of the FastAPI application."""
+    os.makedirs(LOG_FILE_PATH.parent, exist_ok=True)
+
     for model_id, model_info in DEFAULT_MODELS_INFO.items():
         saved_model_path = MODELS_DIR / "default" / model_info["filename"]
         with open(saved_model_path, "rb") as f:
