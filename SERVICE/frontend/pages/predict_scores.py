@@ -12,10 +12,12 @@ import matplotlib.pyplot as plt
 
 st.title("Получение кривых обучения")
 
+
 @st.cache_data
 def load_data(filepath):
     logging.info(f"Данные с файла {filepath} загружены!")
     return pd.read_csv(filepath)
+
 
 df = map_current_models()
 
@@ -49,13 +51,24 @@ if not df.empty:
 
     pressed_predict = st.button("Получить кривые обучения")
 
-    if not ("zipped_csv" in st.session_state or "zipped_csv_new" in st.session_state):
-        st.error("Необходимо загрузить файл в главной вкладке или загрузить свой CSV-файл.")
+    if not ("zipped_csv" in st.session_state
+            or "zipped_csv_new" in st.session_state):
+        st.error(
+            "Необходимо загрузить файл в главной вкладке "
+            "или загрузить свой CSV-файл."
+        )
 
-    if pressed_predict and ("zipped_csv" in st.session_state or "zipped_csv_new" in st.session_state) or "roc_curves_data" in st.session_state:
+    if (pressed_predict
+            and ("zipped_csv" in st.session_state
+                 or "zipped_csv_new" in st.session_state)
+            or "roc_curves_data" in st.session_state):
         if pressed_predict:
             if len(selected_models) > 0:
-                file_to_use = st.session_state['zipped_csv_new'] if use_own_file and uploaded_file else st.session_state.get('zipped_csv', None)
+                file_to_use = (
+                    st.session_state.get('zipped_csv_new')
+                    if use_own_file and uploaded_file
+                    else st.session_state.get('zipped_csv')
+                )
 
                 res_scores_df = predict_scores_action(
                     selected_models, file_to_use

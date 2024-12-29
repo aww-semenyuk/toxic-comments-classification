@@ -178,17 +178,17 @@ def map_background_tasks() -> pd.DataFrame:
 
 
 # Функция, которая будет вызываться при нажатии кнопки
-def delete_action(row_id) -> bool:
+def delete_action(row_id) -> str:
     err = asyncio.run(remove_model(row_id))
     return err
 
 
-def load_model_action(row_id) -> bool:
+def load_model_action(row_id) -> str:
     err = asyncio.run(load_model(row_id))
     return err
 
 
-def unload_model_action(row_id) -> bool:
+def unload_model_action(row_id) -> str:
     err = asyncio.run(unload_model(row_id))
     return err
 

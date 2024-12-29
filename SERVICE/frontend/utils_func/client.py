@@ -68,7 +68,7 @@ async def get_list_models():
             )
 
 
-async def load_model(model_id: str):
+async def load_model(model_id: str) -> str:
     """
     Загрузка модели на сервере.
     """
@@ -79,17 +79,17 @@ async def load_model(model_id: str):
                 f"{BASE_URL}/models/load", json={"id": model_id}
             )
             response.raise_for_status()
-            return False
+            return ""
         except httpx.HTTPStatusError as e:
             logging.info(
                 f"load_model - Ошибка при загрузке модели "
                 f"model_id:{model_id} "
                 f"err:{e.response.json()}"
             )
-            return True
+            return e.response.json()
 
 
-async def unload_model(model_id: str) -> bool:
+async def unload_model(model_id: str) -> str:
     """
     Выгрузка модели.
     """
@@ -100,13 +100,13 @@ async def unload_model(model_id: str) -> bool:
                 f"{BASE_URL}/models/unload", json={"id": model_id}
             )
             response.raise_for_status()
-            return False
+            return ""
         except httpx.HTTPStatusError as e:
             logging.info(
                 f"unload_model - Ошибка при выгрузке модели "
                 f"err:{e.response.json()}"
             )
-            return True
+            return e.response.json()
 
 
 async def predict_model(id: str, X: List[Any]) -> Any:
@@ -158,7 +158,7 @@ async def predict_scores_model(ids: str, zipped_csv: Any) -> Any:
             return None
 
 
-async def remove_model(id: str) -> Any:
+async def remove_model(id: str) -> str:
     """
     Запрос на удаление модели.
     """
@@ -167,14 +167,14 @@ async def remove_model(id: str) -> Any:
         try:
             response = await client.delete(f"{BASE_URL}/models/remove/{id}")
             response.raise_for_status()
-            return None
+            return ""
         except httpx.HTTPStatusError as e:
             logging.info(
                 f"Ошибка при remove_model запросе "
                 f"id: {id} "
                 f"err:{e.response.json()}"
             )
-            return True
+            return e.response.json()
 
 
 async def remove_all_models():
