@@ -1,9 +1,21 @@
 import streamlit as st
-from utils_func.process_data import map_current_models, predict_scores_action
+import pandas as pd
+from utils_func.process_data import (
+    map_current_models,
+    predict_scores_action,
+    create_zip_from_csv,
+    is_data_correct,
+    logging
+)
 from sklearn.metrics import roc_curve, auc
 import matplotlib.pyplot as plt
 
 st.title("Получение кривых обучения")
+
+@st.cache_data
+def load_data(filepath):
+    logging.info(f"Данные с файла {filepath} загружены!")
+    return pd.read_csv(filepath)
 
 df = map_current_models()
 
@@ -17,13 +29,36 @@ if not df.empty:
         format_func=lambda x: f"Модель id-{x}",
     )
 
+    uploaded_file = st.file_uploader(
+        'Загрузите файл с комментариями',
+        type=['csv']
+    )
+
+    if uploaded_file is not None:
+        data = load_data(uploaded_file)
+        if is_data_correct(data) is False:
+            st.error(
+                'Необходимые столбцы: toxic и comment_text'
+                ' - отсутствуют в вашем файле.'
+            )
+        else:
+            zip_data = create_zip_from_csv(uploaded_file, uploaded_file.name)
+            st.session_state['zipped_csv_new'] = zip_data
+
+    use_own_file = st.checkbox("Использовать свой CSV-файл", value=False)
+
     pressed_predict = st.button("Получить кривые обучения")
 
-    if pressed_predict or "roc_curves_data" in st.session_state:
+    if not ("zipped_csv" in st.session_state or "zipped_csv_new" in st.session_state):
+        st.error("Необходимо загрузить файл в главной вкладке или загрузить свой CSV-файл.")
+
+    if pressed_predict and ("zipped_csv" in st.session_state or "zipped_csv_new" in st.session_state) or "roc_curves_data" in st.session_state:
         if pressed_predict:
             if len(selected_models) > 0:
+                file_to_use = st.session_state['zipped_csv_new'] if use_own_file and uploaded_file else st.session_state.get('zipped_csv', None)
+
                 res_scores_df = predict_scores_action(
-                    selected_models, st.session_state['zipped_csv']
+                    selected_models, file_to_use
                 )
 
                 if ('y_true' in res_scores_df.columns
@@ -89,5 +124,6 @@ if not df.empty:
 
             # Отображаем график
             st.pyplot(plt)
+
 else:
     st.info("Нет активных задач в фоновом режиме.")

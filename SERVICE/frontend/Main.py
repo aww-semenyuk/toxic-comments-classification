@@ -24,7 +24,7 @@ def load_data(filepath):
 setup_logging()
 
 uploaded_file = st.file_uploader(
-    'Загрузите файл файл с комментариями',
+    'Загрузите файл с комментариями',
     type=['csv']
 )
 
