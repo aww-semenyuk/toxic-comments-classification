@@ -1,0 +1,45 @@
+#version: '3'
+
+services:
+  backend:
+    platform: linux/amd64
+    build:
+      context: ../backend/
+      dockerfile: Dockerfile
+    container_name: backend
+    restart: always
+    volumes:
+      - ../backend/:/app
+      - models_volume:/app/models
+      - logs_volume:/app/logs
+    env_file:
+      - ./.env
+    ports:
+      - "8000:8000"
+#    healthcheck:
+#      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 3
+#      start_period: 10s
+
+  frontend:
+    platform: linux/amd64
+    build:
+      context: ../frontend/
+      dockerfile: Dockerfile
+    container_name: frontend
+    restart: always
+    ports:
+      - "8501:8501"
+    environment:
+      - BACKEND_URL=http://backend:8000
+    volumes:
+      - logs_volume:/app/logs
+      - ../frontend:/app
+    depends_on:
+      - backend
+
+volumes:
+  models_volume:
+  logs_volume:
