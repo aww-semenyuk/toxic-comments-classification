@@ -221,29 +221,35 @@ class TrainerService:
 
     async def predict_scores(
         self,
-        model_id: str,
+        model_ids: list[str],
         predict_dataset: pd.DataFrame
     ) -> pd.DataFrame:
         """Get prediction scores."""
-        if model_id not in self.models:
-            raise ModelNotFoundError(model_id)
-        if model_id not in self.loaded_models:
-            raise ModelNotLoadedError(model_id)
+        for model_id in model_ids:
+            if model_id not in self.models:
+                raise ModelNotFoundError(model_id)
+            if model_id not in self.loaded_models:
+                raise ModelNotLoadedError(model_id)
 
-        model = self.loaded_models.get(model_id)
+        results = []
+        for model_id in model_ids:
+            model = self.loaded_models.get(model_id)
 
-        X = predict_dataset["comment_text"]
-        y_true = predict_dataset["toxic"]
+            X = predict_dataset["comment_text"]
+            y_true = predict_dataset["toxic"]
 
-        if hasattr(model, "predict_proba"):
-            scores = model.predict_proba(X)[:, 1]
-        else:
-            scores = model.decision_function(X)
+            if hasattr(model, "predict_proba"):
+                scores = model.predict_proba(X)[:, 1]
+            else:
+                scores = model.decision_function(X)
 
-        return pd.DataFrame({
-            "y_true": y_true,
-            "scores": scores
-        })
+            results.append(pd.DataFrame({
+                "model_id": model_id,
+                "scores": scores,
+                "y_true": y_true
+            }))
+
+        return pd.concat(results, ignore_index=True)
 
     async def remove_model(self, model_id: str) -> list[MessageResponse]:
         """Remove a model."""

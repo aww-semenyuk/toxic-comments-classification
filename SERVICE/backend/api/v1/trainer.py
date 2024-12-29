@@ -207,13 +207,16 @@ async def predict(
 
 
 @router.post(
-    "/predict_scores/{id}",
+    "/predict_scores/",
     response_class=StreamingResponse,
     description="Получение данных для построения кривых обучения",
     response_description="CSV-файл с данными для построения кривых обучения"
 )
 async def predict_scores(
-    id: Annotated[str, Path()],
+    ids: Annotated[
+        str,
+        Form(description="Список id моделей через запятую (model_1,model_2)")
+    ],
     predict_file: Annotated[
         UploadFile,
         File(description=(
@@ -227,7 +230,7 @@ async def predict_scores(
     """Endpoint to get the data for building learning curves."""
     dataset = extract_dataset_from_zip_file(predict_file)
     try:
-        result = await trainer_service.predict_scores(id, dataset)
+        result = await trainer_service.predict_scores(ids.split(","), dataset)
 
         buffer = io.StringIO()
         result.to_csv(buffer, index=False)
