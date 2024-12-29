@@ -1,21 +1,15 @@
 from datetime import datetime
-import hashlib
-import time
-from sklearn.svm import LinearSVC
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.model_selection import train_test_split
-from sklearn.pipeline import Pipeline
-from sklearn.compose import ColumnTransformer
-from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.metrics import f1_score
+from typing import Any
+
 import pandas as pd
 import os
 import logging
-from client import get_background_tasks, train_model, get_list_models, remove_all_models, remove_model, load_model, unload_model
+from client import get_background_tasks, train_model, get_list_models, remove_all_models, remove_model, load_model, unload_model, predict_model
 import asyncio
 import zipfile
 import io
+import hashlib
+import time
 
 # Создаём папку для логов, если она не существует
 log_dir = "logs/frontend"
@@ -36,12 +30,10 @@ console_handler.setLevel(logging.INFO)
 console_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
 logging.getLogger().addHandler(console_handler)
 
+
 def is_data_correct(df):
     return {"toxic", "comment_text"}.issubset(df.columns)
 
-
-import hashlib
-import time
 
 def generate_random_hash():
     """
@@ -177,3 +169,24 @@ def create_zip_from_csv(uploaded_file, zip_filename: str) -> bytes:
 
 def delete_all_models():
     asyncio.run(remove_all_models())
+
+
+def escape_quotes(text: str) -> str:
+    """
+    Экранирует кавычки внутри текста.
+
+    Args:
+        text (str): Входной текст.
+
+    Returns:
+        str: Текст с экранированными кавычками.
+    """
+    return text.replace('"', '\\"').replace("'", "\\'")
+
+
+def predict_action(model_id, text) -> Any:
+    formatted_text = escape_quotes(text)
+    res = asyncio.run(predict_model(model_id, [formatted_text]))
+    if res is not None and res.get('predictions') is not None:
+        return res.get('predictions')[0]
+    return None

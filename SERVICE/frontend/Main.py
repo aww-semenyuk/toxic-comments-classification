@@ -10,9 +10,6 @@ def load_data(filepath):
     logging.info(f"Данные с файла {filepath} в Streamlit загружены!")
     return pd.read_csv(filepath)
 
-st.write("Выберите одну из доступных моделей")
-
-active_model = st.selectbox('Модель', ['Логистическая регрессия', 'Линейный SVM', 'Naive Bayes'])
 
 uploaded_file = st.file_uploader('Загрузите файл файл с комментариями', type=['csv'])
 
