@@ -184,10 +184,15 @@ def escape_quotes(text: str) -> str:
     return text.replace('"', '\\"').replace("'", "\\'")
 
 
-def predict_action(model_id, text, zipped_csv) -> Any:
+def predict_action(model_id, text) -> Any:
     formatted_text = escape_quotes(text)
     res = asyncio.run(predict_model(model_id, [formatted_text]))
+    if res is not None and res.get('predictions') is not None:
+        return res.get('predictions')[0]
+    return None
+
+def predict_scores_action(model_id, zipped_csv) -> Any:
     res_scores = asyncio.run(predict_scores_model(model_id, zipped_csv))
-    if res is not None and res.get('predictions') is not None and res_scores is not None:
-        return res.get('predictions')[0], res_scores
+    if res_scores is not None:
+        return res_scores
     return None
