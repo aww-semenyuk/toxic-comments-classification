@@ -100,23 +100,23 @@ async def predict_model(id: str, X: List[Any]) -> Any:
             return None
 
 
-async def predict_scores_model(id: str, zipped_csv: Any) -> Any:
+async def predict_scores_model(ids: str, zipped_csv: Any) -> Any:
     """
     Predict модели.
     """
-    logging.info(f"predict_scores_model id-{id}")
+    logging.info(f"predict_scores_model ids-{ids}")
     files = {
         "predict_file": ("archive.zip", zipped_csv, "application/zip")
     }
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=60.0) as client:
         try:
-            response = await client.post(f"{BASE_URL}/models/predict_scores/{id}", files=files)
+            response = await client.post(f"{BASE_URL}/models/predict_scores/", data={"ids": ids} ,files=files)
             response.raise_for_status()
             csv_content = response.content
             csv_data = io.BytesIO(csv_content)
             return csv_data
         except httpx.HTTPStatusError as e:
-            logging.info(f"Ошибка при Predict Scores модели id:{id} err: {e.response}")
+            logging.info(f"Ошибка при Predict Scores модели ids:{ids} err: {e.response}")
             return None
 
 

@@ -1,12 +1,11 @@
 import streamlit as st
 from process_data import map_current_models, predict_action
-from sklearn.metrics import roc_curve, auc
 
 st.title("Получение предсказанных значение и оценка")
 
 df = map_current_models()
 
-if df.empty is False:
+if not df.empty:
     st.subheader("Выберите модель")
     selected_model = st.selectbox("Модель", df["id"].unique())
     text_X = st.text_area("Введите текст для предсказания")
@@ -20,4 +19,4 @@ if df.empty is False:
 
 
 else:
-    st.info("Нет активных задач в фоновом режиме.")
+    st.info("Нет моделей для предсказания.")
