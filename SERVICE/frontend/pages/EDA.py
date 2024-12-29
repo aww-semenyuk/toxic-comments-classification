@@ -4,11 +4,6 @@ import streamlit as st
 from pandarallel import pandarallel
 import nltk
 
-# nltk.download("stopwords")
-# nltk.download("wordnet")
-# nltk.download("punkt")
-# nltk.download('averaged_perceptron_tagger')
-
 import string
 import plotly.subplots as sp
 import plotly.graph_objects as go
@@ -24,15 +19,7 @@ import base64
 import io
 import random
 
-from nltk.corpus import stopwords
-
-import sys
-import os
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from process_data import logging
-
-
+from utils_func.process_data import logging
 
 # Цвета для «обычных» и «токсичных» данных
 COLOR_ORDINARY = "powderblue"
@@ -40,6 +27,7 @@ COLOR_TOXIC = "crimson"
 
 st.set_page_config(layout="wide")
 pandarallel.initialize(progress_bar=False)
+
 
 class PreprocessLemmaTokenizer:
     def __init__(self):
@@ -54,7 +42,10 @@ class PreprocessLemmaTokenizer:
 
     @staticmethod
     def _normalize(doc):
-        return unicodedata.normalize('NFKD', doc).encode('ascii', 'ignore').decode('utf-8', 'ignore')
+        return unicodedata.normalize(
+            'NFKD', doc).encode(
+            'ascii', 'ignore'
+        ).decode('utf-8', 'ignore')
 
     @staticmethod
     def _get_wordnet_pos(treebank_tag):
@@ -82,8 +73,12 @@ class PreprocessLemmaTokenizer:
         return [
             self.wnl.lemmatize(token, pos=self._get_wordnet_pos(pos_tag))
             for token, pos_tag in pos_tags
-            if token.lower() not in self.stopwords and token not in self.punctuation
+            if (
+                    token.lower() not in self.stopwords
+                    and token not in self.punctuation
+            )
         ]
+
 
 pos_tags_dict = {
     'NN': 'noun (sg.)',
@@ -127,9 +122,11 @@ pos_tags_dict = {
     'LS': 'list marker'
 }
 
+
 def process_tokens(tokens):
     pos_tags = nltk.pos_tag(tokens, lang='eng')
     return [tag for _, tag in pos_tags]
+
 
 def extract_features(tokens_series, ngram_sizes=(2, 3)):
     unique_words = set(chain.from_iterable(tokens_series))
@@ -147,9 +144,13 @@ def extract_features(tokens_series, ngram_sizes=(2, 3)):
 
     return unique_words, unique_ngrams
 
+
 def get_tfd(unique_tokens, cleaned_com_t, gram):
     if gram >= 2:
-        vectorizer = CountVectorizer(vocabulary=unique_tokens, ngram_range=(gram, gram))
+        vectorizer = CountVectorizer(
+            vocabulary=unique_tokens,
+            ngram_range=(gram, gram)
+        )
     else:
         vectorizer = CountVectorizer(vocabulary=unique_tokens)
 
@@ -171,9 +172,10 @@ def get_tfd(unique_tokens, cleaned_com_t, gram):
     total_counts = np.sum(results, axis=0)
     return dict(zip(vectorizer.get_feature_names_out(), total_counts))
 
-#WordCloud генерация
+
 COLOR_ORDINARY_RGB = (176, 224, 230)
 COLOR_TOXIC_RGB = (220, 20, 60)
+
 
 def generate_wordcloud_base64(frequency_dict):
     palette = [COLOR_ORDINARY_RGB, COLOR_TOXIC_RGB]
@@ -193,6 +195,7 @@ def generate_wordcloud_base64(frequency_dict):
     wordcloud.to_image().save(buffer, format="PNG")
     buffer.seek(0)
     return f"data:image/png;base64,{base64.b64encode(buffer.read()).decode()}"
+
 
 # Функция отрисовки графика частей речи
 def plot_pos_in_plotly(most_common_pos_o, most_common_pos_t):
@@ -240,12 +243,10 @@ def plot_pos_in_plotly(most_common_pos_o, most_common_pos_t):
     fig.update_xaxes(title_text="Count", row=1, col=1)
     fig.update_yaxes(title_text="Part of speech", row=1, col=1)
 
-
     fig.update_yaxes(autorange='reversed')
 
     return fig
 
-# Начало приложения
 
 st.title('EDA')
 
@@ -256,22 +257,26 @@ if shared_data is not None:
     start_time = time()
     data = shared_data
     st.markdown('Количество записей: {}'.format(len(data)))
-    st.markdown('Количество уникальных комментариев: {}'.format(data['comment_text'].nunique()))
+    st.markdown(
+        'Количество уникальных комментариев: {}'.format(
+            data['comment_text'].nunique()
+        )
+    )
     data = data.drop_duplicates(subset='comment_text')
     logging.info('Запуск EDA по датасету')
 
     data[['text_length', 'num_words', 'num_sent', 'num_punct']] = (
-            data['comment_text']
-            .parallel_apply(
-                lambda text: (
-                    len(text),
-                    len(nltk.tokenize.word_tokenize(text)),
-                    len(nltk.tokenize.sent_tokenize(text)),
-                    sum(ch in string.punctuation for ch in text)
-                )
+        data['comment_text']
+        .parallel_apply(
+            lambda text: (
+                len(text),
+                len(nltk.tokenize.word_tokenize(text)),
+                len(nltk.tokenize.sent_tokenize(text)),
+                sum(ch in string.punctuation for ch in text)
             )
-            .apply(pd.Series)
         )
+        .apply(pd.Series)
+    )
 
     data['tokens_ws'] = data['comment_text'].apply(PreprocessLemmaTokenizer())
     data['ctws'] = data.tokens_ws.apply(lambda x: ' '.join(x))
@@ -330,8 +335,10 @@ if shared_data is not None:
         }
     }
 
-    st.write(f"Data has been successfully uploaded and processed. Execution time: {time() - start_time:.2f} sec.")
-    st.header("EDA")
+    st.write(
+        f"Data has been successfully uploaded and processed. "
+        f"Execution time: {time() - start_time:.2f} sec."
+    )
 
     #  Графики распределения длины
     st.subheader("Distribution of length analysis")
@@ -351,6 +358,7 @@ if shared_data is not None:
             "max": df[metric].max(),
             "min": df[metric].min()
         }
+
     # распределение слов
     fig_len = sp.make_subplots(
         rows=1, cols=2,
@@ -387,8 +395,8 @@ if shared_data is not None:
     buttons = []
     for i, m in enumerate(metrics):
         visible = [False] * len(metrics) * 2
-        visible[i*2] = True
-        visible[i*2 + 1] = True
+        visible[i * 2] = True
+        visible[i * 2 + 1] = True
 
         non_toxic_stats = calculate_statistics(data[data["toxic"] == 0], m)
         toxic_stats = calculate_statistics(data[data["toxic"] == 1], m)
@@ -399,7 +407,8 @@ if shared_data is not None:
                 text=(
                     f"Ordinary:\nMean: {non_toxic_stats['mean']:.2f}, "
                     f"Median: {non_toxic_stats['median']:.2f}, "
-                    f"Max: {non_toxic_stats['max']}, Min: {non_toxic_stats['min']}"
+                    f"Max: {non_toxic_stats['max']}, "
+                    f"Min: {non_toxic_stats['min']}"
                 ),
                 font=dict(size=12),
                 align="center"
@@ -490,12 +499,18 @@ if shared_data is not None:
 
     for i, (ngram_type, freqs) in enumerate(data_wf.items()):
         ordinary_df = (
-            pd.DataFrame(list(freqs["ordinary"].items()), columns=["word", "count"])
+            pd.DataFrame(
+                list(freqs["ordinary"].items()),
+                columns=["word", "count"]
+            )
             .sort_values(by="count", ascending=False)
             .head(30)
         )
         toxic_df = (
-            pd.DataFrame(list(freqs["toxic"].items()), columns=["word", "count"])
+            pd.DataFrame(
+                list(freqs["toxic"].items()),
+                columns=["word", "count"]
+            )
             .sort_values(by="count", ascending=False)
             .head(30)
         )
@@ -518,7 +533,7 @@ if shared_data is not None:
         )
 
         fig_ngrams.add_trace(bar_ordinary, row=1, col=1)
-        fig_ngrams.add_trace(bar_toxic,   row=1, col=2)
+        fig_ngrams.add_trace(bar_toxic, row=1, col=2)
 
         ordinary_wc = generate_wordcloud_base64(freqs["ordinary"])
         toxic_wc = generate_wordcloud_base64(freqs["toxic"])
@@ -575,8 +590,6 @@ if shared_data is not None:
                 yanchor="top"
             )
         ],
-        #plot_bgcolor="white",
-        #paper_bgcolor="white",
         height=1000,
         width=1200,
         title="Bar Plots and Word Clouds for N-grams",

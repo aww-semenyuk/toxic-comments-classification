@@ -1,5 +1,5 @@
 import streamlit as st
-from process_data import map_current_models, predict_action
+from utils_func.process_data import map_current_models, predict_action
 
 st.title("Получение предсказанных значение и оценка")
 

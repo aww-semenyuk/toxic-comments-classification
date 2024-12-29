@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any
 
 import pandas as pd
-import os
+
 import logging
 import asyncio
 import zipfile
@@ -10,29 +10,29 @@ import io
 import hashlib
 import time
 
-from client import get_background_tasks, train_model, get_list_models, remove_all_models, remove_model, load_model, unload_model, predict_model, predict_scores_model
-
-# Создаём папку для логов, если она не существует
-log_dir = "logs/frontend"
-os.makedirs(log_dir, exist_ok=True)
-
-# Настраиваем логгер
-log_file = os.path.join(log_dir, "app.log")
-logging.basicConfig(
-    filename=log_file,
-    filemode="a",  # "a" для добавления логов, "w" для перезаписи
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    level=logging.INFO  # Уровень логирования: DEBUG, INFO, WARNING, ERROR, CRITICAL
+from utils_func.client import (
+    get_background_tasks,
+    train_model,
+    get_list_models,
+    remove_all_models,
+    remove_model,
+    load_model,
+    unload_model,
+    predict_model,
+    predict_scores_model
 )
-
-# Установка обработчика для консоли (дополнительно)
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-console_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
-logging.getLogger().addHandler(console_handler)
 
 
 def is_data_correct(df):
+    """
+    Проверяет датафрейм на корректность структуры.
+
+    Args:
+        df (pandas.DataFrame): Датафрейм с данными.
+
+    Returns:
+        bool: True, если столбцы "toxic" и "comment_text" есть, иначе False.
+    """
     return {"toxic", "comment_text"}.issubset(df.columns)
 
 
@@ -53,7 +53,14 @@ def generate_random_hash():
     return hash_id
 
 
-def learn_logistic_regression(data, penalty='none', C='1.0', solver='liblinear', max_iter=1000):
+def learn_logistic_regression(
+        data,
+        penalty='none',
+        C='1.0',
+        solver='liblinear',
+        max_iter=1000,
+        vectorizer_type='bag_of_words',
+):
     model_params = {
         'penalty': penalty,
         'C': C,
@@ -65,14 +72,33 @@ def learn_logistic_regression(data, penalty='none', C='1.0', solver='liblinear',
     model_id = f"{hash_id}_logistic"
 
     try:
-        asyncio.run(train_model(data, model_id=model_id, model_type='logistic_regression', model_params=model_params))
+        asyncio.run(
+            train_model(
+                data,
+                model_id=model_id,
+                model_type='logistic_regression',
+                model_params=model_params,
+                vectorizer_type=vectorizer_type
+            )
+        )
         return None
     except Exception as e:
-        logging.info(f"Ошибка обучения logistic_regression модели: {str(e)} Параметры: {model_params}")
+        logging.info(
+            f"Ошибка обучения logistic_regression модели: err:{str(e)} "
+            f"Параметры: {model_params}")
         return True
 
 
-def learn_LinearSVC_regression(data, C='1.0', penalty='l2', loss='squared_hinge', dual=True, class_weight=None, max_iter=1000):
+def learn_LinearSVC_regression(
+        data,
+        C='1.0',
+        penalty='l2',
+        loss='squared_hinge',
+        dual=True,
+        class_weight=None,
+        max_iter=1000,
+        vectorizer_type='bag_of_words'
+):
 
     model_params = {
         'C': C,
@@ -87,30 +113,57 @@ def learn_LinearSVC_regression(data, C='1.0', penalty='l2', loss='squared_hinge'
     model_id = f"{hash_id}_linear_svc"
 
     try:
-        asyncio.run(train_model(data, model_id=model_id, model_type='linear_svc', model_params=model_params))
+        asyncio.run(
+            train_model(
+                data,
+                model_id=model_id,
+                model_type='linear_svc',
+                model_params=model_params,
+                vectorizer_type=vectorizer_type
+            )
+        )
         return None
 
     except Exception as e:
-        logging.info(f"Ошибка обучения LinearSVC модели: {str(e)} Параметры: {model_params}")
+        logging.info(
+            f"Ошибка обучения LinearSVC модели err:{str(e)} "
+            f"Параметры: {model_params}"
+        )
         return True
 
 
-def learn_naive_bayes(data, alpha=1.0, fit_prior=True):
+def learn_naive_bayes(
+        data,
+        alpha=1.0,
+        fit_prior=True,
+        vectorizer_type='bag_of_words'
+):
 
     # Параметры модели MultinomialNB
     model_params = {
         'alpha': alpha,  # Параметр сглаживания
-        'fit_prior': fit_prior  # Признак, указывающий следует ли использовать предположения о вероятностностях принадлежности к классам
+        'fit_prior': fit_prior
     }
 
     hash_id = generate_random_hash()
     model_id = f"{hash_id}_naive_bayes"
 
     try:
-        asyncio.run(train_model(data, model_id=model_id, model_type='multinomial_naive_bayes', model_params=model_params))
+        asyncio.run(
+            train_model(
+                data,
+                model_id=model_id,
+                model_type='multinomial_naive_bayes',
+                model_params=model_params,
+                vectorizer_type=vectorizer_type
+            )
+        )
         return None
     except Exception as e:
-        logging.info(f"Ошибка обучения Naive Bayes модели: {str(e)} Параметры: {model_params}")
+        logging.info(
+            f"Ошибка обучения Naive Bayes модели err:{str(e)} "
+            f"Параметры: {model_params}"
+        )
         return True
 
 
@@ -123,22 +176,29 @@ def map_background_tasks() -> pd.DataFrame:
     df["updated_at"] = df["updated_at"].apply(
         lambda x: datetime.fromisoformat(x).strftime("%d %B %Y, %H:%M:%S")
     )
-    df = df.rename(columns={"name": "Название задачи", "status": "Статус", "result_msg": "Актуальный статус результата", "updated_at": "Дата и время последнего изменения"})
+    df = df.rename(
+        columns={
+            "name": "Название задачи",
+            "status": "Статус",
+            "result_msg": "Актуальный статус результата",
+            "updated_at": "Дата и время последнего изменения"
+        }
+    )
     return df
 
 
 # Функция, которая будет вызываться при нажатии кнопки
-def delete_action(row_id) -> bool:
+def delete_action(row_id) -> str:
     err = asyncio.run(remove_model(row_id))
     return err
 
 
-def load_model_action(row_id) -> bool:
+def load_model_action(row_id) -> str:
     err = asyncio.run(load_model(row_id))
     return err
 
 
-def unload_model_action(row_id) -> bool:
+def unload_model_action(row_id) -> str:
     err = asyncio.run(unload_model(row_id))
     return err
 
@@ -147,7 +207,13 @@ def map_current_models() -> pd.DataFrame:
     res = asyncio.run(get_list_models())
     df = pd.DataFrame(res)
 
-    df = df.rename(columns={"is_trained": "Модель обучена", "is_loaded": "Модель загружена", "type": "Тип модели"})
+    df = df.rename(
+        columns={
+            "is_trained": "Модель обучена",
+            "is_loaded": "Модель загружена",
+            "type": "Тип модели"
+        }
+    )
     return df
 
 
@@ -192,9 +258,15 @@ def predict_action(model_id, text) -> Any:
         return res.get('predictions')[0]
     return None
 
+
 def predict_scores_action(models_id, zipped_csv) -> Any:
     models_id_str = ",".join(map(str, models_id))
     csv_file = asyncio.run(predict_scores_model(models_id_str, zipped_csv))
     if csv_file is not None:
         return pd.read_csv(csv_file)
     return None
+
+
+def format_df(df) -> Any:
+    df_to_display = df.drop(columns=["Unnamed: 0"])
+    return df_to_display
