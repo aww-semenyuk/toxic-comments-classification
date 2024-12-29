@@ -4,18 +4,21 @@ from utils_func.process_data import (
     map_current_models,
     predict_scores_action,
     create_zip_from_csv,
-    is_data_correct,
-    logging
+    is_data_correct
 )
 from sklearn.metrics import roc_curve, auc
 import matplotlib.pyplot as plt
+
+from logger_config import get_logger
+
+logger = get_logger()
 
 st.title("Получение кривых обучения")
 
 
 @st.cache_data
 def load_data(filepath):
-    logging.info(f"Данные с файла {filepath} загружены!")
+    logger.info(f"Данные с файла {filepath} загружены!")
     return pd.read_csv(filepath)
 
 
@@ -74,8 +77,11 @@ if not df.empty:
                     selected_models, file_to_use
                 )
 
-                if ('y_true' in res_scores_df.columns
-                        and 'scores' in res_scores_df.columns):
+                if (
+                    res_scores_df is not None
+                    and 'y_true' in res_scores_df.columns
+                    and 'scores' in res_scores_df.columns
+                ):
 
                     st.session_state["roc_curves_data"] = {
                         model_id: {

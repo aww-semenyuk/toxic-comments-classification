@@ -1,5 +1,8 @@
 import streamlit as st
 from utils_func.process_data import map_current_models, predict_action
+from logger_config import get_logger
+
+logger = get_logger()
 
 st.title("Получение предсказанных значение и оценка")
 

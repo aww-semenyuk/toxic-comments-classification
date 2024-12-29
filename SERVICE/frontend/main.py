@@ -2,11 +2,12 @@ import streamlit as st
 import pandas as pd
 from utils_func.process_data import (
     is_data_correct,
-    logging,
     create_zip_from_csv,
-    format_df,
+    format_df
 )
-from utils_func.setup_logging import setup_logging
+from logger_config import get_logger
+
+logger = get_logger()
 
 st.title(
     'Приложение для анализа и визуализации данных о токсичных комментариев'
@@ -16,12 +17,9 @@ st.header('Загрузите файл с комментариями')
 
 @st.cache_data
 def load_data(filepath):
-    logging.info(f"Данные с файла {filepath} загружены!")
+    logger.info(f"Данные с файла {filepath} загружены!")
     return pd.read_csv(filepath)
 
-
-# Запуск настроек логирования
-setup_logging()
 
 uploaded_file = st.file_uploader(
     'Загрузите файл с комментариями',
@@ -43,7 +41,5 @@ if uploaded_file is not None:
         zip_data = create_zip_from_csv(uploaded_file, uploaded_file.name)
 
         st.session_state['zipped_csv'] = zip_data
-
-
 else:
     st.write('Файл не загружен.')

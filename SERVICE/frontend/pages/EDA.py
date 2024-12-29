@@ -19,7 +19,9 @@ import base64
 import io
 import random
 
-from utils_func.process_data import logging
+from logger_config import get_logger
+
+logger = get_logger()
 
 # Цвета для «обычных» и «токсичных» данных
 COLOR_ORDINARY = "powderblue"
@@ -263,7 +265,7 @@ if shared_data is not None:
         )
     )
     data = data.drop_duplicates(subset='comment_text')
-    logging.info('Запуск EDA по датасету')
+    logger.info('Запуск EDA по датасету')
 
     data[['text_length', 'num_words', 'num_sent', 'num_punct']] = (
         data['comment_text']
