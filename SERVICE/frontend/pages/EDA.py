@@ -4,15 +4,9 @@ import streamlit as st
 from pandarallel import pandarallel
 import nltk
 
-# nltk.download("stopwords")
-# nltk.download("wordnet")
-# nltk.download("punkt")
-# nltk.download('averaged_perceptron_tagger')
-
 import string
 import plotly.subplots as sp
 import plotly.graph_objects as go
-import plotly.io as pio
 from joblib import Parallel, delayed
 from time import time
 from collections import Counter
@@ -20,8 +14,6 @@ import unicodedata
 from itertools import chain
 from sklearn.feature_extraction.text import CountVectorizer
 import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
 from wordcloud import WordCloud
 import base64
 import io
