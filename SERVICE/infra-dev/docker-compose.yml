@@ -16,12 +16,12 @@ services:
       - ./.env
     ports:
       - "8000:8000"
-#    healthcheck:
-#      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
-#      interval: 10s
-#      timeout: 5s
-#      retries: 3
-#      start_period: 10s
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   frontend:
     platform: linux/amd64
@@ -38,7 +38,8 @@ services:
       - logs_volume:/app/logs
       - ../frontend:/app
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
 volumes:
   models_volume:
