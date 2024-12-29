@@ -4,10 +4,10 @@ import streamlit as st
 from pandarallel import pandarallel
 import nltk
 
-nltk.download("stopwords")
-nltk.download("wordnet")
-nltk.download("punkt")
-nltk.download('averaged_perceptron_tagger')
+# nltk.download("stopwords")
+# nltk.download("wordnet")
+# nltk.download("punkt")
+# nltk.download('averaged_perceptron_tagger')
 
 import string
 import plotly.subplots as sp

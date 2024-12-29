@@ -123,6 +123,8 @@ def learn_naive_bayes(data, alpha=1.0, fit_prior=True):
 
 def map_background_tasks() -> pd.DataFrame:
     res = asyncio.run(get_background_tasks())
+    if not res:
+        return pd.DataFrame()
     df = pd.DataFrame(res)
     df = df.drop(columns=["uuid"])
     df["updated_at"] = df["updated_at"].apply(

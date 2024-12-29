@@ -3,8 +3,9 @@ import json
 import httpx
 from typing import List, Any
 from process_data import logging
+import os
 
-BASE_URL = "http://127.0.0.1:8000/api/v1"
+BASE_URL = os.environ.get('BACKEND_URL', 'http://localhost:8000') + "/api/v1"
 
 
 async def train_model(data, model_id: str = 'default_logistic', model_type: str = 'linear_svc', model_params: dict = {}) -> None:
