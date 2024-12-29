@@ -43,11 +43,11 @@ async def lifespan(application: FastAPI):
         max_workers=app_config.cores_cnt - 1
     )
     logger.info("Пул процессов запущен")
-
-    logger.info("Application started")
+    logger.info("Приложение запущено")
     yield
     application.state.process_executor.shutdown(wait=True)
     logger.info("Пул процессов остановлен")
+    logger.info("Приложение остановлено")
 
 
 app = FastAPI(
@@ -66,7 +66,9 @@ async def log_requests(request: Request, call_next):
     http_version = request.scope.get("http_version", "1.1")
     response = await call_next(request)
     logger.info(
-        '"%s %s HTTP/%s" %d',
+        '%s:%d - "%s %s HTTP/%s" %d',
+        request.client.host,
+        request.client.port,
         method, url,
         http_version,
         response.status_code
@@ -106,4 +108,10 @@ app.include_router(
 )
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        access_log=False
+    )
