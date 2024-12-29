@@ -4,7 +4,7 @@ from typing import Any
 import pandas as pd
 import os
 import logging
-from client import get_background_tasks, train_model, get_list_models, remove_all_models, remove_model, load_model, unload_model, predict_model
+from client import get_background_tasks, train_model, get_list_models, remove_all_models, remove_model, load_model, unload_model, predict_model, predict_scores_model
 import asyncio
 import zipfile
 import io
@@ -184,9 +184,10 @@ def escape_quotes(text: str) -> str:
     return text.replace('"', '\\"').replace("'", "\\'")
 
 
-def predict_action(model_id, text) -> Any:
+def predict_action(model_id, text, zipped_csv) -> Any:
     formatted_text = escape_quotes(text)
     res = asyncio.run(predict_model(model_id, [formatted_text]))
-    if res is not None and res.get('predictions') is not None:
-        return res.get('predictions')[0]
+    res_scores = asyncio.run(predict_scores_model(model_id, zipped_csv))
+    if res is not None and res.get('predictions') is not None and res_scores is not None:
+        return res.get('predictions')[0], res_scores
     return None
