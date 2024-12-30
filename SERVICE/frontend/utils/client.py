@@ -7,7 +7,7 @@ import asyncio
 class RequestHandler:
     BASE_URL = os.environ.get("BACKEND_URL",
                               "http://localhost:8000") + "/api/v1"
-    TIMEOUT = 5
+    TIMEOUT = 50
 
     def __init__(self, logger):
         self.logger = logger
