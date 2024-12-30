@@ -25,11 +25,20 @@ services:
       - ./.env
     volumes:
       - logs_volume:/app/logs
-    ports:
-      - "8501:8501"
     depends_on:
       backend:
         condition: service_healthy
+
+  nginx:
+    image: nginx:1.19.3
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - backend
 
 volumes:
   models_volume:
