@@ -3,15 +3,10 @@ import datetime as dt
 import os
 from uuid import UUID
 
-import unicodedata
-import spacy
-import nltk
-nltk.download('stopwords')
-
 import cloudpickle
-from concurrent.futures import ProcessPoolExecutor
+import pandas as pd
+from fastapi import BackgroundTasks
 
-from background_tasks import train_and_save_model_task, prepare_predict_data
 from exceptions import (
     ModelIDAlreadyExistsError,
     ModelNotFoundError,
@@ -19,81 +14,31 @@ from exceptions import (
     ModelsLimitExceededError,
     DefaultModelRemoveUnloadError,
     ModelNotTrainedError,
-    ActiveProcessesLimitExceededError
+    ActiveProcessesLimitExceededError,
+    ModelAlreadyLoadedError
 )
 from serializers.background_tasks import BGTask, BGTaskStatus
 from serializers.trainer import (
     MessageResponse,
-    GetStatusResponse,
     PredictResponse,
     MLModel,
-    MLModelConfig
+    MLModelConfig,
     PredictRequest,
-    ModelListResponse,
-    PredictResponse,
+    MLModelInListResponse
 )
+from serializers.utils.trainer import serialize_params
 from services.background_tasks import BGTasksService
-from settings.app_config import (
-    AppConfig,
-    active_processes,
-    DEFAULT_MODEL_NAMES
-)
+from services.utils.trainer import train_and_save_model_task
+from settings.app_config import active_processes, app_config
+from settings.app_config import logger
+from store import DEFAULT_MODELS_INFO
 
-available_models = {MLModelType.LogisticRegression: LogisticRegression(),
-                    MLModelType.MultinomialNB: MultinomialNB()}
-
-class FunctionWrapper:
-    # https://stackoverflow.com/a/75720040
-
-    def __init__(self, fn):
-        self.fn_ser = cloudpickle.dumps(fn)
-
-    def __call__(self, *args, **kwargs):
-        fn = cloudpickle.loads(self.fn_ser)
-        return fn(*args, **kwargs)
-
-default_vec_params = {
-    'tokenizer': FunctionWrapper(lambda x: x.split('\t')),
-    'strip_accents': None,
-    'lowercase': False,
-    'preprocessor': None,
-    'stop_words': None,
-    'token_pattern': None
-}
-
-available_vectorizers = {VectorizerType.CountVectorizer: CountVectorizer(**default_vec_params),
-                         VectorizerType.TfidfVectorizer: TfidfVectorizer(**default_vec_params)}
-
-class CustomTokenizer(BaseEstimator, TransformerMixin):
-    nlp = spacy.load('en_core_web_sm')
-    stopwords = set(nltk.corpus.stopwords.words('english'))
-
-    def __init__(self, batch_size=64, sep='\t'):
-        self.batch_size = batch_size
-        self.sep = sep
-
-    @staticmethod
-    def normalize_text(doc):
-        return unicodedata.normalize('NFKD', doc).encode('ascii', 'ignore').decode('utf-8', 'ignore')
-
-    def fit(self, X, y=None):
-        return self
-
-    def transform(self, X):
-        results = []
-
-        corpus_normalized = [self.normalize_text(doc) for doc in X]
-        pipe = self.nlp.pipe(corpus_normalized, disable=['ner', 'parser'], batch_size=self.batch_size)
-
-        for doc in pipe:
-            results.append(self.sep.join([token.lemma_.lower() for token in doc if not (token.lemma_.lower() in self.stopwords or token.is_space or token.is_punct)]))
-
-        return results
 
 class TrainerService:
+    """Service for training and managing models."""
+
     def __init__(
         self,
-        app_config: AppConfig,
         models_store: dict[str, MLModel],
         loaded_models: dict,
         bg_tasks_store: dict[UUID, BGTask],
@@ -103,7 +48,6 @@ class TrainerService:
         from main import app
         self.process_executor = app.state.process_executor
 
-        self.app_config = app_config
         self.models = models_store
         self.loaded_models = loaded_models
         self.bg_tasks_store = bg_tasks_store
@@ -115,7 +59,8 @@ class TrainerService:
         model_config: MLModelConfig,
         fit_dataset: pd.DataFrame
     ) -> MessageResponse:
-        if active_processes.value >= self.app_config.cores_cnt:
+        """Train a new model."""
+        if active_processes.value >= app_config.cores_cnt:
             raise ActiveProcessesLimitExceededError()
 
         model_id = model_config.id
@@ -138,6 +83,7 @@ class TrainerService:
         model_config: MLModelConfig,
         fit_dataset: pd.DataFrame
     ) -> None:
+        """Execute the fitting task."""
         loop = asyncio.get_event_loop()
 
         bg_task = BGTask(name=f"Обучение модели '{model_id}'")
@@ -151,17 +97,26 @@ class TrainerService:
 
         active_processes.value += 1
         try:
-            model_file_path = await loop.run_in_executor(
-                self.process_executor,
-                train_and_save_model_task,
-                self.app_config.models_dir_path, model_config, fit_dataset
+            (
+                model_file_path,
+                model_params,
+                vectorizer_params
+            ) = await asyncio.wait_for(
+                loop.run_in_executor(
+                    self.process_executor,
+                    train_and_save_model_task,
+                    model_config, fit_dataset
+                ),
+                timeout=1800
             )
 
             self.models[model_id] = MLModel(
                 id=model_id,
                 type=model_config.ml_model_type,
                 is_trained=True,
-                saved_model_file_path=model_file_path
+                model_params=model_params,
+                vectorizer_params=vectorizer_params,
+                saved_model_file_path=model_file_path,
             )
 
             self.bg_tasks_store[bg_task_id].status = BGTaskStatus.success
@@ -170,48 +125,60 @@ class TrainerService:
             )
             active_processes.value -= 1
         except Exception as e:
-            self.bg_tasks_store[bg_task_id].status = BGTaskStatus.failure
-            self.bg_tasks_store[bg_task_id].result_msg = (
-                f"Ошибка при обучении модели '{model_id}': {e}."
-            )
-            active_processes.value -= 1
-            raise e
-        self.bg_tasks_store[bg_task_id].updated_at = dt.datetime.now()
+            self.models.pop(model_id, None)
 
+            self.bg_tasks_store[bg_task_id].status = BGTaskStatus.failure
+
+            if isinstance(e, TimeoutError):
+                result_msg = (
+                    f"Превышено время обучения модели ({model_id}). "
+                    "Задача остановлена."
+                )
+                logger.info(result_msg)
+            else:
+                result_msg = f"Ошибка при обучении модели '{model_id}': {e}."
+                logger.error(result_msg)
+
+            self.bg_tasks_store[bg_task_id].result_msg = result_msg
+
+            active_processes.value -= 1
+
+        self.bg_tasks_store[bg_task_id].updated_at = dt.datetime.now()
         self.bg_tasks_service.rotate_tasks()
 
     async def load_model(self, model_id: str) -> list[MessageResponse]:
-        if len(self.loaded_models) == self.app_config.models_max_cnt:
+        """Load a model into memory."""
+        if model_id in self.loaded_models:
+            raise ModelAlreadyLoadedError(model_id)
+        if len(self.loaded_models) >= (
+            app_config.models_max_cnt + len(DEFAULT_MODELS_INFO)
+        ):
             raise ModelsLimitExceededError()
         if model_id not in self.models:
             raise ModelNotFoundError(model_id)
         if not self.models[model_id].is_trained:
             raise ModelNotTrainedError(model_id)
 
-        self.loaded_models[model_id] = (
-            joblib.load(self.models[model_id].saved_model_file_path)
-        )
+        with self.models[model_id].saved_model_file_path.open('rb') as f:
+            self.loaded_models[model_id] = cloudpickle.load(f)
+
+        self.models[model_id].is_loaded = True
+
         return [MessageResponse(
             message=f"Модель '{model_id}' загружена в память."
         )]
 
-    async def get_status(self) -> list[GetStatusResponse]:
-        return [
-            GetStatusResponse(
-                status=f"Модель '{model_id}' готова к использованию"
-            )
-            for model_id in self.loaded_models.keys()
-        ]
-
     async def unload_model(self, model_id: str) -> list[MessageResponse]:
+        """Unload a model from memory."""
         if model_id not in self.models:
             raise ModelNotFoundError(model_id)
         if model_id not in self.loaded_models:
             raise ModelNotLoadedError(model_id)
-        if model_id in DEFAULT_MODEL_NAMES:
+        if model_id in DEFAULT_MODELS_INFO:
             raise DefaultModelRemoveUnloadError()
 
         self.loaded_models.pop(model_id, None)
+        self.models[model_id].is_loaded = False
         return [MessageResponse(
             message=f"Модель '{model_id}' выгружена из памяти."
         )]
@@ -219,25 +186,76 @@ class TrainerService:
     async def predict(
         self,
         model_id: str,
-        predict_dataset: pd.DataFrame
+        predict_data: PredictRequest
     ) -> PredictResponse:
+        """Make a prediction using a model."""
         if model_id not in self.models:
             raise ModelNotFoundError(model_id)
         if model_id not in self.loaded_models:
             raise ModelNotLoadedError(model_id)
 
         model = self.loaded_models.get(model_id)
-        # TODO: Заменить затычку на настоящую функцию (2)
-        X = prepare_predict_data()
-        return PredictResponse(predictions=model.predict(X).tolist())
+        return PredictResponse(
+            predictions=model.predict(predict_data.X).tolist()
+        )
 
-    async def list_models(self) -> list[MLModel]:
-        return list(self.models.values())
+    async def get_models(self) -> list[MLModelInListResponse]:
+        """Get a list of models."""
+        response_list = []
+
+        for model_info in self.models.values():
+            response_list.append(
+                MLModelInListResponse(
+                    id=model_info.id,
+                    type=model_info.type,
+                    is_trained=model_info.is_trained,
+                    is_loaded=model_info.is_loaded,
+                    model_params=serialize_params(model_info.model_params),
+                    vectorizer_params=serialize_params(
+                        model_info.vectorizer_params
+                    )
+                )
+            )
+
+        return response_list
+
+    async def predict_scores(
+        self,
+        model_ids: list[str],
+        predict_dataset: pd.DataFrame
+    ) -> pd.DataFrame:
+        """Get prediction scores."""
+        for model_id in model_ids:
+            if model_id not in self.models:
+                raise ModelNotFoundError(model_id)
+            if model_id not in self.loaded_models:
+                raise ModelNotLoadedError(model_id)
+
+        results = []
+        for model_id in model_ids:
+            model = self.loaded_models.get(model_id)
+
+            X = predict_dataset["comment_text"]
+            y_true = predict_dataset["toxic"]
+
+            if hasattr(model, "predict_proba"):
+                scores = model.predict_proba(X)[:, 1]
+            else:
+                scores = model.decision_function(X)
+
+            results.append(pd.DataFrame({
+                "model_id": model_id,
+                "scores": scores,
+                "y_true": y_true
+            }))
+
+        return pd.concat(results, ignore_index=True)
 
     async def remove_model(self, model_id: str) -> list[MessageResponse]:
+        """Remove a model."""
         if model_id not in self.models:
             raise ModelNotFoundError(model_id)
-        if model_id in DEFAULT_MODEL_NAMES:
+        if model_id in DEFAULT_MODELS_INFO:
             raise DefaultModelRemoveUnloadError()
 
         saved_model_filepath = self.models[model_id].saved_model_file_path
@@ -249,15 +267,21 @@ class TrainerService:
         return [MessageResponse(message=f"Модель '{model_id}' удалена.")]
 
     async def remove_all_models(self) -> MessageResponse:
-        saved_model_file_paths = [
-            model_info.saved_model_file_path
-            for model_info in self.models.values()
+        """Remove all models."""
+        model_to_remove_ids = [
+            model_id for model_id in self.models
+            if model_id not in DEFAULT_MODELS_INFO
         ]
-        self.models.clear()
-        self.loaded_models.clear()
-        for file_path in saved_model_file_paths:
-            if os.path.isfile(file_path):
-                os.remove(file_path)
+        for model_id in model_to_remove_ids:
+            model_info = self.models.get(model_id)
+            if model_info:
+                file_path = self.models[model_id].saved_model_file_path
+                self.models.pop(model_id, None)
+
+                if file_path and os.path.isfile(file_path):
+                    os.remove(file_path)
+
+            self.loaded_models.pop(model_id, None)
 
         return MessageResponse(
             message="Все модели, кроме моделей по умолчанию, удалены."

@@ -6,6 +6,7 @@ from starlette import status
 
 
 def extract_dataset_from_zip_file(uploaded_file: UploadFile) -> pd.DataFrame:
+    """Extract dataset from zip-file."""
     if not uploaded_file.filename.endswith(".zip"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -20,7 +21,7 @@ def extract_dataset_from_zip_file(uploaded_file: UploadFile) -> pd.DataFrame:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="CSV-файл не найден в архиве."
             )
-        elif len(csv_files) > 1:
+        if len(csv_files) > 1:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Архив должен содержать только один CSV-файл."
