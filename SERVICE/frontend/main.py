@@ -17,7 +17,8 @@ st.header('Загрузите файл с комментариями')
 
 @st.cache_data
 def load_data(filepath):
-    logger.info(f"Данные с файла {filepath} загружены!")
+    """File data loader."""
+    logger.info("Данные с файла %s загружены!", filepath)
     return pd.read_csv(filepath)
 
 

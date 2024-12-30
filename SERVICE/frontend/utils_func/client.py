@@ -1,9 +1,10 @@
 import io
 import json
+import os
+import zipfile
+from typing import List, Any
 
 import httpx
-from typing import List, Any
-import os
 
 from logger_config import get_logger
 
@@ -16,7 +17,7 @@ async def train_model(
         data,
         model_id: str = 'default_logistic',
         model_type: str = 'linear_svc',
-        model_params: dict = {},
+        model_params: dict = dict,
         vectorizer_type: str = 'bag_of_words',
 ) -> None:
     """
@@ -114,7 +115,7 @@ async def unload_model(model_id: str) -> str:
             return e.response.json()
 
 
-async def predict_model(id: str, X: List[Any]) -> Any:
+async def predict_model(id: str, X: List[str]) -> Any:
     """
     Predict модели.
     """
@@ -137,7 +138,10 @@ async def predict_model(id: str, X: List[Any]) -> Any:
             return None
 
 
-async def predict_scores_model(ids: str, zipped_csv: Any) -> Any:
+async def predict_scores_model(
+    ids: str,
+    zipped_csv: zipfile.ZipFile
+) -> io.BytesIO | None:
     """
     Predict модели.
     """
