@@ -1,10 +1,10 @@
 import streamlit as st
-import pandas as pd
 
 from logger_config import get_logger
-from utils_func.process_data import (
-    is_data_correct,
-    create_zip_from_csv
+from utils.data_processing import (
+    check_input_data,
+    create_zip_from_csv,
+    load_data
 )
 
 logger = get_logger()
@@ -17,14 +17,6 @@ obtaining predicitions \
 for the task of classificating toxic comments
 """, divider='gray')
 
-
-@st.cache_data
-def load_data(filepath):
-    """File data loader."""
-    logger.info("Данные с файла %s загружены!", filepath)
-    return pd.read_csv(filepath)
-
-
 uploaded_file = st.file_uploader(
     r'$\large\text{Upload data to analyze/train model with}$',
     type=['csv'],
@@ -34,7 +26,7 @@ uploaded_file = st.file_uploader(
 
 if uploaded_file:
     data = load_data(uploaded_file)
-    if not is_data_correct(data):
+    if not check_input_data(data):
         st.error("""Your data's format is incorrect, \
                  check that is contains columns "comment_text" and "toxic"
                  """)

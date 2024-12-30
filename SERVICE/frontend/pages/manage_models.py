@@ -1,73 +1,78 @@
 import streamlit as st
-from utils_func.process_data import (
-    map_current_models,
-    delete_all_models,
-    delete_action,
-    load_model_action,
-    unload_model_action
-)
+import pandas as pd
+
 from logger_config import get_logger
+from utils.client import RequestHandler
+
 
 logger = get_logger()
+handler = RequestHandler(logger)
 
-st.title("Управление текущими моделями")
 
-df = map_current_models()
+st.subheader("Trained models management")
 
-if df.empty is False:
-    pressed = st.button("Удалить все модели")
-    if pressed:
-        delete_all_models()
-        st.success("Текущие модели удалены.")
-    st.divider()
-    (
-        header_col1,
-        header_col2,
-        header_col3,
-        header_col4,
-        header_col5,
-    ) = st.columns([2, 3, 2, 2, 2])
+models_resp = handler.get_models()
 
-    header_col1.write("**ID**")
-    header_col2.write("**Тип модели**")
-    header_col3.write("**Модель обучена**")
-    header_col4.write("**Загрузить/Выгрузить модель**")
-    header_col5.write("**Действие**")
-    for i, row in df.iterrows():
-        col1, col2, col3, col4, col5 = st.columns([2, 3, 2, 2, 2])
-        col1.write(row["id"])
-        col2.write(row["Тип модели"])
-        col3.write(row["Модель обучена"])
-        if row["Модель загружена"] is True:
-            pressed_unload = col4.button(
-                "Выгрузить модель", key=f"button_unload_{row['id']}"
-            )
-            if pressed_unload:
-                err = unload_model_action(row["id"])
-                if err is not None:
-                    st.error(f"Ошибка при выгрузки модели {row['id']}: {err}")
-                else:
-                    st.success(f"Модель выгружена {row['id']}.")
-        else:
-            pressed_load = col4.button(
-                "Загрузить модель", key=f"button_load_{row['id']}"
-            )
-            if pressed_load:
-                err = load_model_action(row["id"])
-                if err is not None:
-                    st.error(f"Ошибка при загрузки модели {row['id']}: {err}")
-                else:
-                    st.success(f"Модель загружена {row['id']}.")
-
-        pressed = col5.button("Удалить модель", key=f"button_{row['id']}")
-        if pressed:
-            err = delete_action(row["id"])
-            if err is not None:
-                st.error(
-                    f"Ошибка при удалении модели id: {row['id']} err: {err}"
-                )
-            else:
-                st.success(f"Модель удалена {row['id']}.")
-
+if models_resp["is_success"]:
+    tmp_df = pd.DataFrame(models_resp["response"].json()) \
+        .loc[lambda df: df["is_trained"]]
+    if tmp_df.empty:
+        st.info("No trained models")
+    else:
+        df_models = tmp_df
 else:
-    st.info("Нет активных задач в фоновом режиме.")
+    st.error(models_resp["response"].json()["detail"])
+
+if "df_models" in locals():
+    if st.button("Remove all models (except default)"):
+        remove_all_resp = handler.remove_all_models()
+        if remove_all_resp["is_success"]:
+            st.success('All models except defaults removed')
+        else:
+            st.error(f'{remove_all_resp["response"].json()["detail"]}')
+
+    col_names = ['Model ID', 'Model type', 'LOAD/UNLOAD', 'DELETE']
+    col_widths = [0.36, 0.3, 0.17, 0.17]
+    cols = dict(zip(col_names, st.columns(col_widths)))
+
+    for name, col in cols.items():
+        col.write(name)
+
+    for _, row in df_models.iterrows():
+        cols = dict(zip(col_names, st.columns(col_widths)))
+        cols['Model ID'].write(row['id'])
+        cols['Model type'].write(row['type'])
+
+        if row['is_loaded']:
+            unload_button = cols['LOAD/UNLOAD'].button(
+                'Unload',
+                key=f"button_unload_{row['id']}",
+                use_container_width=True)
+            if unload_button:
+                unload_resp = handler.unload_model(row["id"])
+                if unload_resp["is_success"]:
+                    st.success(f'Model {row["id"]} unloaded')
+                else:
+                    st.error(f'{unload_resp["response"].json()["detail"]}')
+        else:
+            load_button = cols['LOAD/UNLOAD'].button(
+                'Load',
+                key=f"button_load_{row['id']}",
+                use_container_width=True)
+            if load_button:
+                load_resp = handler.load_model(row["id"])
+                if load_resp["is_success"]:
+                    st.success(f'Model {row["id"]} loaded')
+                else:
+                    st.error(f'{load_resp["response"].json()["detail"]}')
+
+        delete_button = cols['DELETE'].button(
+            'Delete',
+            key=f"button_delete_{row['id']}",
+            use_container_width=True)
+        if delete_button:
+            delete_resp = handler.remove_model(row["id"])
+            if delete_resp["is_success"]:
+                st.success(f'Model {row["id"]} deleted')
+            else:
+                st.error(f'{delete_resp["response"].json()["detail"]}')

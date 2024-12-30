@@ -39,7 +39,7 @@ scores_page = st.Page(
 
 pg = st.navigation({
     'Home': [home_page],
-    'Models': [train_page, manage_page, predict_page, scores_page],
+    'Models': [manage_page, train_page, predict_page, scores_page],
     'Analytics': [eda_page],
     'Tools': [bg_page]
 }, expanded=True)
