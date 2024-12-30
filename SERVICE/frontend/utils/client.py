@@ -37,9 +37,11 @@ class RequestHandler:
                 self.logger.info(f"Successfuly called '{response.url}'")
                 return {"is_success": True, "response": response}
             except httpx.HTTPStatusError as e:
-                self.logger.error(f"Error response {e.response.status_code} \
-                                    while requesting {e.request.url}: \
-                                    {e.response.text}")
+                self.logger.error(
+                    f"Error response {e.response.status_code}"
+                    f"while requesting {e.request.url}: "
+                    f"{e.response.text}"
+                )
                 return {"is_success": False, "response": e.response}
 
     def get_models(self):
