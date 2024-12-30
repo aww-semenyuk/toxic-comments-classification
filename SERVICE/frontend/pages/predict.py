@@ -1,25 +1,48 @@
 import streamlit as st
-from utils_func.process_data import map_current_models, predict_action
 from logger_config import get_logger
+import pandas as pd
+
+from utils.client import RequestHandler
+from utils.data_processing import escape_quotes
 
 logger = get_logger()
 
-st.title("Получение предсказанных значение и оценка")
+handler = RequestHandler(logger)
 
-df = map_current_models()
+st.subheader("Predict toxicity")
 
-if not df.empty:
-    st.subheader("Выберите модель")
-    selected_model = st.selectbox("Модель", df["id"].unique())
-    text_X = st.text_area("Введите текст для предсказания")
-    pressed_predict = st.button("Получить предсказание")
-    if pressed_predict is True:
-        res = predict_action(selected_model, text_X)
-        if res is None:
-            st.error("Ошибка при получении предсказания.")
-        else:
-            st.success(f"Предсказанное значение: {res}")
+models_resp = handler.get_models()
 
-
+if models_resp["is_success"]:
+    tmp_df = pd.DataFrame(models_resp["response"].json())
+    if tmp_df.empty:
+        st.info("No models to predict with, train first")
+    else:
+        df_models = tmp_df
 else:
-    st.info("Нет моделей для предсказания.")
+    st.error(models_resp["response"].json()["detail"])
+
+if "df_models" in locals():
+    selected_model = st.selectbox(r"$\text{Select a model}$",
+                                  df_models["id"].unique())
+    text_X = st.text_area(
+        r"$\text{Enter new line separated texts to predict toxicity for}$")
+    text_X = escape_quotes(text_X)
+    X = text_X.split('\n')
+    pressed_predict = st.button("Obtain predictions")
+    if pressed_predict:
+        if not df_models[df_models["id"] == selected_model]["is_loaded"] \
+                .values[0]:
+            st.error("""The model is unloaded, \
+                     load the model first and try again""")
+        else:
+            pred_resp = handler.predict(selected_model, X)
+            if pred_resp["is_success"]:
+                preds = pred_resp["response"] \
+                    .json()["predictions"]
+                preds_text = ["Toxic" if pred > 0 else "Not toxic"
+                              for pred in preds]
+                st.markdown(r'$\text{Predictions}$')
+                st.table({"Text": X, "Predictions": preds_text})
+            else:
+                st.error(pred_resp["response"].json()["detail"])

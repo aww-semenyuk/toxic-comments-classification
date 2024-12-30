@@ -1,14 +1,24 @@
 import streamlit as st
-from utils_func.process_data import map_background_tasks
+import pandas as pd
+
 from logger_config import get_logger
+from utils.client import RequestHandler
 
 logger = get_logger()
+handler = RequestHandler(logger)
 
-st.title("Мониторинг фоновых задач")
+st.subheader("Background tasks monitor")
 
-df = map_background_tasks()
+bg_resp = handler.get_bg_tasks()
 
-if df.empty is False:
-    st.table(df)
+if bg_resp["is_success"]:
+    tmp_df = pd.DataFrame(bg_resp["response"].json())
+    if tmp_df.empty:
+        st.info("No background tasks found")
+    else:
+        df_bg = tmp_df
 else:
-    st.info("Нет активных задач в фоновом режиме.")
+    st.error(bg_resp["response"].json()["detail"])
+
+if "df_bg" in locals():
+    st.table(df_bg.sort_values("updated_at", ascending=False))
