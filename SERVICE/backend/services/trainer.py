@@ -270,7 +270,7 @@ class TrainerService:
         """Remove all models."""
         model_to_remove_ids = [
             model_id for model_id in self.models
-            if model_id not in DEFAULT_MODELS_INFO.keys()
+            if model_id not in DEFAULT_MODELS_INFO
         ]
         for model_id in model_to_remove_ids:
             model_info = self.models.get(model_id)
