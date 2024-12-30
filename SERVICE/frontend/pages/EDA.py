@@ -250,7 +250,7 @@ def plot_pos_in_plotly(most_common_pos_o, most_common_pos_t):
     return fig
 
 
-st.title('EDA')
+st.subheader('EDA')
 
 shared_data = None
 if 'shared_data' in st.session_state:
