@@ -267,8 +267,3 @@ def predict_scores_action(models_id, zipped_csv) -> Any:
     if csv_file is not None:
         return pd.read_csv(csv_file)
     return None
-
-
-def format_df(df) -> Any:
-    df_to_display = df.drop(columns=["Unnamed: 0"])
-    return df_to_display
