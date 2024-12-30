@@ -1,0 +1,36 @@
+version: '3'
+
+services:
+  backend:
+    image: ${DOCKERHUB_USERNAME}/toxic-comments-backend:latest
+    container_name: backend
+    restart: always
+    volumes:
+      - models_volume:/app/models
+      - logs_volume:/app/logs
+    env_file:
+      - ./.env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  frontend:
+    image: ${DOCKERHUB_USERNAME}/toxic-comments-frontend:latest
+    container_name: frontend
+    restart: always
+    env_file:
+      - ./.env
+    volumes:
+      - logs_volume:/app/logs
+    ports:
+      - "8501:8501"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  models_volume:
+  logs_volume:
