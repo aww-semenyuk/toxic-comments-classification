@@ -58,7 +58,7 @@ if "df_models" in locals():
                                                uploaded_file.name)
                 st.session_state['zipped_csv_new'] = zip_data
 
-    pressed_predict = st.button("Построить графики")
+    pressed_predict = st.checkbox("Plot")
     if pressed_predict:
         st.divider()
 
