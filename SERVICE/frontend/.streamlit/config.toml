@@ -1,0 +1,4 @@
+[server]
+maxUploadSize=10000
+maxMessageSize=3000
+enableWebsocketCompression = false
