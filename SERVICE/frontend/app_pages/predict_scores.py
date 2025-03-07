@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from sklearn.metrics import roc_curve, auc
-import matplotlib.pyplot as plt
+import plotly.express as px
 from io import BytesIO
 
 from logger_config import get_logger
@@ -12,10 +12,8 @@ from utils.data_processing import (
     check_input_data
 )
 
-
 logger = get_logger()
 handler = RequestHandler(logger)
-
 
 st.subheader("Plot ROC curves")
 
@@ -43,14 +41,14 @@ if "df_models" in locals():
         uploaded_file = st.file_uploader(
             r'$\large\text{Upload data to plot}$',
             type=['csv'],
-            help='data must contain columns named "comment_text" and "toxic"',
+            help='Data must contain columns named "comment_text" and "toxic"',
             label_visibility='visible'
         )
         if uploaded_file:
             data = load_data(uploaded_file)
             if not check_input_data(data):
                 st.error("""Your data's format is incorrect, \
-                         check that is contains columns \
+                         check that it contains columns \
                          "comment_text" and "toxic"
                         """)
             else:
@@ -58,7 +56,7 @@ if "df_models" in locals():
                                                uploaded_file.name)
                 st.session_state['zipped_csv_new'] = zip_data
 
-    pressed_predict = st.checkbox("Plot")
+    pressed_predict = st.button("Построить графики")
     if pressed_predict:
         st.divider()
 
@@ -76,29 +74,36 @@ if "df_models" in locals():
             else:
                 resp_df = pd.read_csv(BytesIO(scores_resp['response'].content))
 
-                fig, ax = plt.subplots(figsize=(12, 8))
-                ax.plot([0, 1], [0, 1], color='k', lw=2, linestyle='--')
+                all_data = []
 
-                visibility = {}
                 for model_id in resp_df['model_id'].unique():
-                    visibility[model_id] = st.checkbox(
-                        f"Show ROC for {model_id}", value=True
+                    data_ = resp_df[resp_df['model_id'] == model_id]
+                    fpr, tpr, _ = roc_curve(data_['y_true'], data_['scores'])
+                    auc_score = auc(fpr, tpr)
+                    model_data = pd.DataFrame({
+                        "False Positive Rate": fpr,
+                        "True Positive Rate": tpr,
+                        "Model": [f"{model_id} (AUC={auc_score:.2f})"] * len(fpr)
+                    })
+                    all_data.append(model_data)
+
+                if all_data:
+                    all_data_df = pd.concat(all_data, ignore_index=True)
+                    fig = px.line(
+                        all_data_df,
+                        x="False Positive Rate",
+                        y="True Positive Rate",
+                        color="Model",
+                        title="Receiver Operating Characteristic (ROC) Curve"
                     )
-
-                for model_id in visibility.keys():
-                    if visibility[model_id]:
-                        data_ = resp_df[resp_df['model_id'] == model_id]
-                        fpr, tpr, _ = roc_curve(
-                            data_['y_true'], data_['scores'])
-                        auc_score = auc(fpr, tpr)
-                        ax.plot(fpr, tpr,
-                                label=f'{model_id}: AUC={auc_score:.2f}')
-
-                ax.legend(loc='best', fontsize='large')
-                ax.set_xlabel('False Positive Rate', fontsize='xx-large')
-                ax.set_ylabel('True Positive Rate', fontsize='xx-large')
-                ax.set_title('Receiver Operating Characteristic (ROC) Curve',
-                             fontsize='xx-large')
-                ax.grid()
-
-                st.pyplot(fig)
+                    fig.update_layout(
+                        xaxis_title="False Positive Rate",
+                        yaxis_title="True Positive Rate",
+                        legend_title="Models",
+                        showlegend=True,
+                        width=900,
+                        height=600,
+                    )
+                    st.plotly_chart(fig, use_container_width=False)
+                else:
+                    st.warning("No models available for plotting.")
