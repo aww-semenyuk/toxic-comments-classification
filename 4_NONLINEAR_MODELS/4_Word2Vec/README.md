@@ -6,7 +6,7 @@
 
 ## Результаты
 
-[Notebook](/3_1_BASELINE/word2vec.ipynb)
+[Notebook](./word2vec.ipynb)
 
 | Word2Vec | Embedding strategy | Estimator | f1 score (Validation) |
 | --- | --- | --- | --- |
