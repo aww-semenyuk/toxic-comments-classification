@@ -6,7 +6,7 @@ class ModelNotFoundError(Exception):
         super().__init__(self.detail)
 
 
-class ModelIDAlreadyExistsError(Exception):
+class ModelNameAlreadyExistsError(Exception):
     def __init__(self, model_id: str):
         self.detail = f"Модель '{model_id}' уже существует."
         super().__init__(self.detail)

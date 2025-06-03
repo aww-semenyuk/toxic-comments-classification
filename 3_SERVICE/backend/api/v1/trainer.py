@@ -1,5 +1,6 @@
 import io
 import json
+from ast import Param
 from typing import Annotated
 
 from fastapi import (
@@ -20,7 +21,7 @@ from starlette.responses import StreamingResponse
 from api.utils import extract_dataset_from_zip_file
 from dependency import get_trainer_service
 from exceptions import (
-    ModelIDAlreadyExistsError,
+    ModelNameAlreadyExistsError,
     ModelNotFoundError,
     ModelNotLoadedError,
     ModelsLimitExceededError,
@@ -29,7 +30,7 @@ from exceptions import (
     DefaultModelRemoveUnloadError,
     ModelNotTrainedError, ModelAlreadyLoadedError
 )
-from serializers.trainer import (
+from serializers import (
     MLModelConfig,
     LoadRequest,
     MessageResponse,
@@ -40,7 +41,7 @@ from serializers.trainer import (
     PredictRequest,
     VectorizerType
 )
-from services.trainer import TrainerService
+from services import TrainerService
 
 router = APIRouter()
 
@@ -51,10 +52,11 @@ router = APIRouter()
     description="Получение списка моделей"
 )
 async def get_models(
-    trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
+    trainer_service: Annotated[TrainerService, Depends(get_trainer_service)],
+    is_dl: Annotated[bool, Param()] = False
 ):
     """Endpoint to get a list of models."""
-    return await trainer_service.get_models()
+    return await trainer_service.get_models(is_dl=is_dl)
 
 
 @router.post(
@@ -73,7 +75,7 @@ async def fit(
             "и `toxic` (бинарная метка токсичности)"
         ))
     ],
-    id: Annotated[str, Form()],
+    name: Annotated[str, Form()],
     vectorizer_type: Annotated[VectorizerType, Form()],
     ml_model_type: Annotated[MLModelType, Form()],
     ml_model_params: Annotated[
@@ -104,7 +106,7 @@ async def fit(
     try:
         return await trainer_service.fit_models(
             MLModelConfig(
-                id=id,
+                name=name,
                 vectorizer_type=vectorizer_type,
                 spacy_lemma_tokenizer=spacy_lemma_tokenizer,
                 vectorizer_params=parsed_vectorizer_params,
@@ -119,9 +121,9 @@ async def fit(
             detail=repr(e.errors()[0]["msg"])
         )
     except (
-        ModelIDAlreadyExistsError,
-        InvalidFitPredictDataError,
-        ActiveProcessesLimitExceededError
+            ModelNameAlreadyExistsError,
+            InvalidFitPredictDataError,
+            ActiveProcessesLimitExceededError
     ) as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -140,7 +142,7 @@ async def load(
 ):
     """Endpoint to load a model into the inference space."""
     try:
-        return await trainer_service.load_model(request.id)
+        return await trainer_service.load_model(request.name)
     except ModelNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -168,7 +170,7 @@ async def unload(
 ):
     """Endpoint to load a model into the inference space."""
     try:
-        return await trainer_service.unload_model(request.id)
+        return await trainer_service.unload_model(request.name)
     except ModelNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -182,18 +184,18 @@ async def unload(
 
 
 @router.post(
-    "/predict/{id}",
+    "/predict/{name}",
     response_model=PredictResponse,
     description="Предсказание модели"
 )
 async def predict(
-    id: Annotated[str, Path()],
+    name: Annotated[str, Path()],
     request: PredictRequest,
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
 ):
     """Endpoint to make a prediction using a model."""
     try:
-        return await trainer_service.predict(id, request)
+        return await trainer_service.predict(name, request)
     except ModelNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -213,9 +215,9 @@ async def predict(
     response_description="CSV-файл с данными для построения кривых обучения"
 )
 async def predict_scores(
-    ids: Annotated[
+    names: Annotated[
         str,
-        Form(description="Список id моделей через запятую (model_1,model_2)")
+        Form(description="Список имен моделей через запятую (model_1,model_2)")
     ],
     predict_file: Annotated[
         UploadFile,
@@ -230,7 +232,10 @@ async def predict_scores(
     """Endpoint to get the data for building learning curves."""
     dataset = extract_dataset_from_zip_file(predict_file)
     try:
-        result = await trainer_service.predict_scores(ids.split(","), dataset)
+        result = await trainer_service.predict_scores(
+            names.split(","),
+            dataset
+        )
 
         buffer = io.StringIO()
         result.to_csv(buffer, index=False)
@@ -258,17 +263,17 @@ async def predict_scores(
 
 
 @router.delete(
-    "/remove/{id}",
+    "/remove/{name}",
     response_model=list[MessageResponse],
     description="Удаление модели"
 )
 async def remove(
-    id: Annotated[str, Path()],
+    name: Annotated[str, Path()],
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)]
 ):
     """Endpoint to remove a model."""
     try:
-        return await trainer_service.remove_model(id)
+        return await trainer_service.remove_model(name)
     except ModelNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

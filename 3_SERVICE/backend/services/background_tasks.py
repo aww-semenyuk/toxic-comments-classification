@@ -1,7 +1,6 @@
-from uuid import UUID
-
-from serializers.background_tasks import BGTask
-from settings.app_config import app_config
+from repository import BgTasksRepository
+from serializers import BGTaskSchema
+from settings import app_config
 
 
 class BGTasksService:
@@ -9,31 +8,23 @@ class BGTasksService:
 
     def __init__(
         self,
-        bg_tasks_store: dict[UUID, BGTask]
+        bg_tasks_repo: BgTasksRepository,
     ):
-        self.bg_tasks = bg_tasks_store
+        self.bg_tasks_repo = bg_tasks_repo
 
-    async def get_tasks(self) -> list[BGTask]:
+    async def get_tasks(self) -> list[BGTaskSchema]:
         """Get a list of background tasks."""
-        return list(self.bg_tasks.values())
+        tasks = await self.bg_tasks_repo.get_tasks()
+        return [BGTaskSchema.model_validate(task) for task in tasks]
 
-    def rotate_tasks(self):
+    async def rotate_tasks(self):
         """Rotate the background tasks."""
-        if len(self.bg_tasks) > app_config.max_saved_bg_tasks:
-            removable_tasks = sorted(
-                (
-                    task for task in self.bg_tasks.values()
-                    if task.status in ("success", "failure")
-                ),
-                key=lambda task: task.updated_at,
-                reverse=True
-            )
+        bg_tasks = await self.bg_tasks_repo.get_tasks()
+        if len(bg_tasks) > app_config.max_saved_bg_tasks:
+            excess_count = len(bg_tasks) - app_config.max_saved_bg_tasks
+            task_ids_to_remove = [
+                task.uuid for task in bg_tasks
+                if task.status in ("success", "failure")
+            ][-excess_count:]
 
-            excess_count = (
-                len(self.bg_tasks) - app_config.max_saved_bg_tasks
-            )
-            task_ids_to_remove = {
-                task.uuid for task in removable_tasks[:excess_count]
-            }
-            for task_id in task_ids_to_remove:
-                del self.bg_tasks[task_id]
+            await self.bg_tasks_repo.delete_tasks_by_uuid(task_ids_to_remove)

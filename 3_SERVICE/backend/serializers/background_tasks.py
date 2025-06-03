@@ -11,9 +11,12 @@ class BGTaskStatus(str, Enum):
     failure = "failure"
 
 
-class BGTask(BaseModel):
+class BGTaskSchema(BaseModel):
     uuid: UUID = Field(default_factory=uuid4)
     name: str
     status: BGTaskStatus = BGTaskStatus.running
     result_msg: str | None = None
     updated_at: datetime | None = datetime.now()
+
+    class Config:
+        from_attributes = True

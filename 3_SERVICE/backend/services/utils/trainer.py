@@ -14,8 +14,8 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.svm import LinearSVC
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 
-from serializers.trainer import MLModelType, VectorizerType, MLModelConfig
-from settings.app_config import MODELS_DIR
+from serializers import MLModelType, VectorizerType, MLModelConfig
+from settings import MODELS_DIR
 
 AVAILABLE_ESTIMATORS = {
     MLModelType.logistic_regression: LogisticRegression,
@@ -129,7 +129,7 @@ def train_and_save_model_task(
     fit_dataset: pd.DataFrame
 ) -> tuple[Path, dict, dict]:
     """Train and save a model."""
-    model_id = model_config.id
+    model_name = model_config.name
 
     X = fit_dataset["comment_text"]
     y = fit_dataset["toxic"]
@@ -139,7 +139,7 @@ def train_and_save_model_task(
     )
     pipe.fit(X, y)
 
-    model_file_path = MODELS_DIR / f"{model_id}.cloudpickle"
+    model_file_path = MODELS_DIR / f"{model_name}.cloudpickle"
     with model_file_path.open('wb') as file:
         cloudpickle.dump(pipe, file)
 

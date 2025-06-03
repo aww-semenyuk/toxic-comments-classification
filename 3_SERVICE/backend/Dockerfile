@@ -4,7 +4,7 @@ WORKDIR /app
 COPY . .
 
 RUN apt-get update && \
-    apt-get upgrade && \
+    apt-get upgrade -y && \
     apt-get install --no-install-recommends -y curl && \
     pip install --upgrade pip && \
     pip install -r requirements.txt --no-cache-dir && \

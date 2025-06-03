@@ -1,6 +1,7 @@
 import re
 from enum import Enum
 from pathlib import Path
+from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -25,19 +26,19 @@ class VectorizerType(str, Enum):
 
 class MLModelConfig(BaseModel):
     """Pydantic model for the model config."""
-    id: str
+    name: str
     spacy_lemma_tokenizer: bool = False
     vectorizer_type: VectorizerType
     vectorizer_params: dict
     ml_model_type: MLModelType
     ml_model_params: dict
 
-    @field_validator("id")
-    def validate_id(cls, v):
-        """Validator for the ID field."""
+    @field_validator("name")
+    def validate_name(cls, v):
+        """Validator for the name field."""
         if not bool(re.compile(r"^[a-z0-9_]+(?:[-_][a-z0-9_]+)*$").match(v)):
             raise ValueError(
-                "ID модели может состоять только из строчных латинских букв, "
+                "Имя модели может состоять только из строчных латинских букв, "
                 "цифр,  дефисов, и знаков подчеркивания"
             )
         return v
@@ -45,7 +46,7 @@ class MLModelConfig(BaseModel):
 
 class LoadRequest(BaseModel):
     """Pydantic model for the load request."""
-    id: str
+    name: str
 
 
 class UnloadRequest(LoadRequest):
@@ -65,9 +66,9 @@ class PredictResponse(BaseModel):
     predictions: list[int]
 
 
-class MLModelInListResponse(BaseModel):
-    """Pydantic model for the model in list response."""
-    id: str
+class MLModelBaseSchema(BaseModel):
+    """Pydantic model for the model."""
+    name: str
     type: MLModelType
     is_trained: bool = False
     is_loaded: bool = False
@@ -75,6 +76,14 @@ class MLModelInListResponse(BaseModel):
     vectorizer_params: dict = Field(default_factory=dict)
 
 
-class MLModel(MLModelInListResponse):
-    """Pydantic model for the model."""
+class MLModelCreateSchema(MLModelBaseSchema):
+    is_dl_model: bool = False
     saved_model_file_path: Path | None = None
+
+
+class MLModelInListResponse(MLModelBaseSchema):
+    """Pydantic model for the model in list response."""
+    uuid: UUID
+
+    class Config:
+        from_attributes = True

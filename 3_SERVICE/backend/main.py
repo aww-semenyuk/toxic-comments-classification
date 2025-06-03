@@ -2,17 +2,17 @@ import os
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import asynccontextmanager
 
-import cloudpickle
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, BackgroundTasks
 from pydantic import BaseModel, ConfigDict
 
 from api.v1.background_tasks import router as background_tasks_router
 from api.v1.trainer import router as trainer_router
-from serializers.trainer import MLModel
-from serializers.utils.trainer import serialize_params
-from settings.app_config import logger, app_config, MODELS_DIR, LOG_FILE_PATH
-from store import loaded_models, models, DEFAULT_MODELS_INFO
+from database.database import AsyncSessionFactory
+from repository import ModelsRepository, BgTasksRepository
+from services import TrainerService, BGTasksService
+from settings import logger, app_config, LOG_FILE_PATH
+from store import loaded_models
 
 
 @asynccontextmanager
@@ -20,36 +20,26 @@ async def lifespan(application: FastAPI):
     """Context manager for the lifespan of the FastAPI application."""
     os.makedirs(LOG_FILE_PATH.parent, exist_ok=True)
 
-    for model_id, model_info in DEFAULT_MODELS_INFO.items():
-        saved_model_path = MODELS_DIR / "default" / model_info["filename"]
-        with open(saved_model_path, "rb") as f:
-            pipe = cloudpickle.load(f)
-
-        loaded_models[model_id] = pipe
-        models[model_id] = MLModel(
-            id=model_id,
-            type=model_info["type"],
-            is_trained=True,
-            is_loaded=True,
-            model_params=serialize_params(
-                pipe.named_steps['classifier'].get_params()
-            ),
-            vectorizer_params=serialize_params(
-                pipe.named_steps['vectorizer'].get_params()
-            ),
-            saved_model_file_path=saved_model_path
-        )
-
-    logger.info("Предобученные модели загружены")
-
     application.state.process_executor = ProcessPoolExecutor(
         max_workers=app_config.cores_cnt - 1
     )
     logger.info("Пул процессов запущен")
+
+    async with AsyncSessionFactory() as session:
+        await TrainerService(
+            models_repo=ModelsRepository(session),
+            loaded_models=loaded_models,
+            bg_tasks_repo=BgTasksRepository(session),
+            background_tasks=BackgroundTasks(),
+            bg_tasks_service=BGTasksService(BgTasksRepository(session))
+        ).create_and_load_default_models()
+    logger.info("Предобученные модели загружены")
+
     logger.info("Приложение запущено")
     yield
     application.state.process_executor.shutdown(wait=True)
     logger.info("Пул процессов остановлен")
+
     logger.info("Приложение остановлено")
 
 
