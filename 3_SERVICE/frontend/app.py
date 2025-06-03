@@ -31,6 +31,11 @@ predict_page = st.Page(
     title="Predict",
     icon=":material/network_node:"
 )
+predict_dl_page = st.Page(
+    'app_pages/predict_dl.py',
+    title="Predict with DL",
+    icon=":material/network_node:"
+)
 scores_page = st.Page(
     'app_pages/predict_scores.py',
     title="Compare models by ROC",
@@ -39,7 +44,7 @@ scores_page = st.Page(
 
 pg = st.navigation({
     'Home': [home_page],
-    'Models': [manage_page, train_page, predict_page, scores_page],
+    'Models': [manage_page, train_page, predict_page, predict_dl_page, scores_page],
     'Analytics': [eda_page],
     'Tools': [bg_page]
 }, expanded=True)
