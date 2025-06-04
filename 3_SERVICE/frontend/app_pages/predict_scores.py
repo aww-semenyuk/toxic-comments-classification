@@ -32,8 +32,8 @@ else:
 if "df_models" in locals():
     selected_models = st.multiselect(
         r'$\large\text{Select a model}$',
-        df_models["id"].unique(),
-        default=df_models["id"].unique()[0]
+        df_models["name"].unique(),
+        default=df_models["name"].unique()[0]
     )
 
     use_train_data = st.checkbox("Use previous (train) data", value=True)
@@ -76,14 +76,14 @@ if "df_models" in locals():
 
                 all_data = []
 
-                for model_id in resp_df['model_id'].unique():
-                    data_ = resp_df[resp_df['model_id'] == model_id]
+                for model_name in resp_df['model_name'].unique():
+                    data_ = resp_df[resp_df['model_name'] == model_name]
                     fpr, tpr, _ = roc_curve(data_['y_true'], data_['scores'])
                     auc_score = auc(fpr, tpr)
                     model_data = pd.DataFrame({
                         "False Positive Rate": fpr,
                         "True Positive Rate": tpr,
-                        "Model": [f"{model_id} (AUC={auc_score:.2f})"] * len(fpr)
+                        "Model": [f"{model_name} (AUC={auc_score:.2f})"] * len(fpr)
                     })
                     all_data.append(model_data)
 

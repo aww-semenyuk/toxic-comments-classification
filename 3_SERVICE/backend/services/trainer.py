@@ -291,15 +291,13 @@ class TrainerService:
             message="Все модели, кроме моделей по умолчанию, удалены."
         )
 
-    async def create_and_load_default_models(self) -> None:
+    async def create_and_load_models(self) -> None:
         """Create default models."""
         models_to_create = []
         for model_name, model_info in DEFAULT_MODELS_INFO.items():
             saved_model_path = MODELS_DIR / "default" / model_info["filename"]
             with open(saved_model_path, "rb") as f:
                 pipe = cloudpickle.load(f)
-
-            self.loaded_models[model_name] = pipe
 
             if not await self.models_repo.get_model_by_name(model_name):
                 models_to_create.append(MLModelCreateSchema(
@@ -318,3 +316,12 @@ class TrainerService:
                 ))
 
         await self.models_repo.create_models(models_to_create)
+
+        db_models = (
+            await self.models_repo.get_models()
+            + await self.models_repo.get_models(is_dl=True)
+        )
+        for db_model in db_models:
+            if db_model.is_loaded:
+                with open(db_model.saved_model_file_path, "rb") as f:
+                    self.loaded_models[db_model.uuid] = cloudpickle.load(f)

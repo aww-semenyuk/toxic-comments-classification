@@ -26,7 +26,7 @@ else:
         vectorizer_choice, vectorizer_params = select_vectorizer_parameters()
 
     model_id = st.text_input(
-        r"$\large\text{Enter the name of your model -- model\_id}$")
+        r"$\large\text{Enter the name of your model}$")
     if not model_id:
         model_id = f"{model_choice}_{generate_random_hash()}"
 

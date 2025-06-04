@@ -32,7 +32,7 @@ async def lifespan(application: FastAPI):
             bg_tasks_repo=BgTasksRepository(session),
             background_tasks=BackgroundTasks(),
             bg_tasks_service=BGTasksService(BgTasksRepository(session))
-        ).create_and_load_default_models()
+        ).create_and_load_models()
     logger.info("Предобученные модели загружены")
 
     logger.info("Приложение запущено")

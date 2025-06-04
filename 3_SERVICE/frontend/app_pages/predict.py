@@ -24,14 +24,14 @@ else:
 
 if "df_models" in locals():
     selected_model = st.selectbox(r"$\text{Select a model}$",
-                                  df_models["id"].unique())
+                                  df_models["name"].unique())
     text_X = st.text_area(
         r"$\text{Enter new line separated texts to predict toxicity for}$")
     text_X = escape_quotes(text_X)
     X = text_X.split('\n')
     pressed_predict = st.button("Obtain predictions")
     if pressed_predict:
-        if not df_models[df_models["id"] == selected_model]["is_loaded"] \
+        if not df_models[df_models["name"] == selected_model]["is_loaded"] \
                 .values[0]:
             st.error("""The model is unloaded, \
                      load the model first and try again""")
