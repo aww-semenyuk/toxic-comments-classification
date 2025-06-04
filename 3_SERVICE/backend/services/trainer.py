@@ -31,7 +31,7 @@ from serializers.utils.trainer import serialize_params
 from services import BGTasksService
 from services.utils.trainer import train_and_save_model_task
 from settings import active_processes, app_config, logger, MODELS_DIR
-from store import DEFAULT_MODELS_INFO
+from store import DEFAULT_MODELS_INFO, dl_model_manager
 
 
 class TrainerService:
@@ -296,22 +296,27 @@ class TrainerService:
         models_to_create = []
         for model_name, model_info in DEFAULT_MODELS_INFO.items():
             saved_model_path = MODELS_DIR / "default" / model_info["filename"]
-            with open(saved_model_path, "rb") as f:
-                pipe = cloudpickle.load(f)
+            is_dl_model=model_info["is_dl_model"]
+            
+            if is_dl_model:
+                dl_model_manager.load_model(saved_model_path)
+            else:
+                with open(saved_model_path, "rb") as f:
+                    pipe = cloudpickle.load(f)
 
             if not await self.models_repo.get_model_by_name(model_name):
                 models_to_create.append(MLModelCreateSchema(
                     name=model_name,
                     type=model_info["type"],
-                    is_dl_model=model_info["is_dl_model"],
+                    is_dl_model=is_dl_model,
                     is_trained=True,
                     is_loaded=True,
                     model_params=serialize_params(
                         pipe.named_steps["classifier"].get_params()
-                    ),
+                    ) if is_dl_model else {},
                     vectorizer_params=serialize_params(
                         pipe.named_steps["vectorizer"].get_params()
-                    ),
+                    ) if is_dl_model else {},
                     saved_model_file_path=saved_model_path
                 ))
 
@@ -322,6 +327,6 @@ class TrainerService:
             + await self.models_repo.get_models(is_dl=True)
         )
         for db_model in db_models:
-            if db_model.is_loaded:
+            if db_model.is_loaded and not db_model.is_dl_model:
                 with open(db_model.saved_model_file_path, "rb") as f:
                     self.loaded_models[db_model.uuid] = cloudpickle.load(f)
