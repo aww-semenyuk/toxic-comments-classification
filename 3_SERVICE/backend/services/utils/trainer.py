@@ -144,3 +144,25 @@ def train_and_save_model_task(
         cloudpickle.dump(pipe, file)
 
     return model_file_path, model_params, vectorizer_params
+
+
+def get_dl_model_predictions(
+    model_type: MLModelType,
+    model,
+    texts: list[str],
+    return_scores: bool = False
+) -> list[int]:
+    predictions = []
+    if model_type == MLModelType.distilbert:
+        if return_scores:
+            results = model(texts, top_k=2)
+            for result in results:
+                for pred in result:
+                    if pred["label"] == "LABEL_1":
+                        predictions.append(pred["score"])
+        else:
+            results = model(texts)
+            for result in results:
+                predictions.append(1 if result["label"] == "LABEL_1" else 0)
+
+    return predictions

@@ -15,6 +15,12 @@ DEFAULT_MODELS_INFO = {
         "type": MLModelType.multinomial_nb,
         "filename": "model_mnb_e.cloudpickle",
         "is_dl_model": False
+    },
+    "default_distilbert": {
+        "type": MLModelType.distilbert,
+        "filename": "distilbert",
+        "is_dl_model": True,
+        "tokenizer": "distilbert-base-uncased"
     }
 }
 

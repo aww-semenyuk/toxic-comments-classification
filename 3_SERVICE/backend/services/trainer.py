@@ -5,6 +5,7 @@ import os
 import cloudpickle
 import pandas as pd
 from fastapi import BackgroundTasks
+from transformers import pipeline
 
 from exceptions import (
     ModelNameAlreadyExistsError,
@@ -25,11 +26,15 @@ from serializers import (
     MLModelConfig,
     PredictRequest,
     MLModelInListResponse,
-    MLModelCreateSchema
+    MLModelCreateSchema,
+    MLModelType
 )
 from serializers.utils.trainer import serialize_params
 from services import BGTasksService
-from services.utils.trainer import train_and_save_model_task
+from services.utils.trainer import (
+    train_and_save_model_task,
+    get_dl_model_predictions
+)
 from settings import active_processes, app_config, logger, MODELS_DIR
 from store import DEFAULT_MODELS_INFO
 
@@ -198,9 +203,16 @@ class TrainerService:
             raise ModelNotLoadedError(model_name)
 
         loaded_model = self.loaded_models.get(model.uuid)
-        return PredictResponse(
-            predictions=loaded_model.predict(predict_data.X).tolist()
-        )
+        if model.is_dl_model:
+            predictions = get_dl_model_predictions(
+                model.type,
+                loaded_model,
+                predict_data.X
+            )
+        else:
+            predictions = loaded_model.predict(predict_data.X).tolist()
+
+        return PredictResponse(predictions=predictions)
 
     async def get_models(
         self,
@@ -243,15 +255,23 @@ class TrainerService:
 
         results = []
         for db_model in models:
-            model = self.loaded_models.get(db_model.uuid)
+            loaded_model = self.loaded_models.get(db_model.uuid)
 
             X = predict_dataset["comment_text"]
             y_true = predict_dataset["toxic"]
 
-            if hasattr(model, "predict_proba"):
-                scores = model.predict_proba(X)[:, 1]
+            if db_model.is_dl_model:
+                scores = get_dl_model_predictions(
+                    db_model.type,
+                    loaded_model,
+                    X.tolist(),
+                    return_scores=True
+                )
             else:
-                scores = model.decision_function(X)
+                if hasattr(loaded_model, "predict_proba"):
+                    scores = loaded_model.predict_proba(X)[:, 1]
+                else:
+                    scores = loaded_model.decision_function(X)
 
             results.append(pd.DataFrame({
                 "model_name": db_model.name,
@@ -293,35 +313,53 @@ class TrainerService:
 
     async def create_and_load_models(self) -> None:
         """Create default models."""
-        models_to_create = []
         for model_name, model_info in DEFAULT_MODELS_INFO.items():
             saved_model_path = MODELS_DIR / "default" / model_info["filename"]
-            with open(saved_model_path, "rb") as f:
-                pipe = cloudpickle.load(f)
+            is_dl_model = model_info["is_dl_model"]
+            model_type = model_info["type"]
 
-            if not await self.models_repo.get_model_by_name(model_name):
-                models_to_create.append(MLModelCreateSchema(
-                    name=model_name,
-                    type=model_info["type"],
-                    is_dl_model=model_info["is_dl_model"],
-                    is_trained=True,
-                    is_loaded=True,
-                    model_params=serialize_params(
-                        pipe.named_steps["classifier"].get_params()
-                    ),
-                    vectorizer_params=serialize_params(
-                        pipe.named_steps["vectorizer"].get_params()
-                    ),
-                    saved_model_file_path=saved_model_path
-                ))
+            model_params = {}
+            vectorizer_params = {}
+            if is_dl_model:
+                if model_type == MLModelType.distilbert:
+                    pipe = pipeline(
+                        "text-classification",
+                        model=saved_model_path,
+                        tokenizer=model_info["tokenizer"]
+                    )
+                    model_params = pipe.model.config.to_dict()
+                    vectorizer_params = pipe.tokenizer.init_kwargs
+            else:
+                with open(saved_model_path, "rb") as f:
+                    pipe = cloudpickle.load(f)
 
-        await self.models_repo.create_models(models_to_create)
+                model_params = serialize_params(
+                    pipe.named_steps["classifier"].get_params()
+                )
+                vectorizer_params = serialize_params(
+                    pipe.named_steps["vectorizer"].get_params()
+                )
 
-        db_models = (
-            await self.models_repo.get_models()
-            + await self.models_repo.get_models(is_dl=True)
-        )
-        for db_model in db_models:
-            if db_model.is_loaded:
+            db_model = await self.models_repo.get_model_by_name(model_name)
+            if db_model:
+                db_model_uuid = db_model.uuid
+            else:
+                db_model_uuid = await self.models_repo.create_model(
+                    MLModelCreateSchema(
+                        name=model_name,
+                        type=model_type,
+                        is_dl_model=is_dl_model,
+                        is_trained=True,
+                        is_loaded=True,
+                        model_params=model_params,
+                        vectorizer_params=vectorizer_params,
+                        saved_model_file_path=saved_model_path
+                    )
+                )
+
+            self.loaded_models[db_model_uuid] = pipe
+
+        for db_model in await self.models_repo.get_models():
+            if db_model.name not in DEFAULT_MODELS_INFO and db_model.is_loaded:
                 with open(db_model.saved_model_file_path, "rb") as f:
                     self.loaded_models[db_model.uuid] = cloudpickle.load(f)

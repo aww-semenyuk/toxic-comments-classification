@@ -16,6 +16,7 @@ class MLModelType(str, Enum):
     logistic_regression = "logistic_regression"
     multinomial_nb = "multinomial_naive_bayes"
     linear_svc = "linear_svc"
+    distilbert = "distilbert"
 
 
 class VectorizerType(str, Enum):

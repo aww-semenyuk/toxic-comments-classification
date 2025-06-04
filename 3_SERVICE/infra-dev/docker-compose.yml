@@ -30,7 +30,7 @@ services:
     entrypoint: >
       bash -c "echo 'применение миграций для БД...'
       && alembic upgrade head
-      && echo 'запуск веб сервера...'
+      && echo 'запуск сервера...'
       && python main.py"
     volumes:
       - ../backend/:/app
@@ -47,7 +47,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 20s
     depends_on:
       postgres_db:
         condition: service_healthy
