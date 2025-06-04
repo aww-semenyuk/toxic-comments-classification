@@ -17,6 +17,7 @@ class MLModelType(str, Enum):
     multinomial_nb = "multinomial_naive_bayes"
     linear_svc = "linear_svc"
     distilbert = "distilbert"
+    deberta = "deberta"
 
 
 class VectorizerType(str, Enum):

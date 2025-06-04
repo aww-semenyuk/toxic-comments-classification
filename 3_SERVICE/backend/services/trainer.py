@@ -5,7 +5,6 @@ import os
 import cloudpickle
 import pandas as pd
 from fastapi import BackgroundTasks
-from transformers import pipeline
 
 from exceptions import (
     ModelNameAlreadyExistsError,
@@ -27,13 +26,14 @@ from serializers import (
     PredictRequest,
     MLModelInListResponse,
     MLModelCreateSchema,
-    MLModelType
 )
 from serializers.utils.trainer import serialize_params
 from services import BGTasksService
 from services.utils.trainer import (
     train_and_save_model_task,
-    get_dl_model_predictions
+    get_dl_model_predictions,
+    get_dl_model,
+    get_ml_model,
 )
 from settings import active_processes, app_config, logger, MODELS_DIR
 from store import DEFAULT_MODELS_INFO
@@ -205,7 +205,6 @@ class TrainerService:
         loaded_model = self.loaded_models.get(model.uuid)
         if model.is_dl_model:
             predictions = get_dl_model_predictions(
-                model.type,
                 loaded_model,
                 predict_data.X
             )
@@ -262,7 +261,6 @@ class TrainerService:
 
             if db_model.is_dl_model:
                 scores = get_dl_model_predictions(
-                    db_model.type,
                     loaded_model,
                     X.tolist(),
                     return_scores=True
@@ -316,28 +314,15 @@ class TrainerService:
         for model_name, model_info in DEFAULT_MODELS_INFO.items():
             saved_model_path = MODELS_DIR / "default" / model_info["filename"]
             is_dl_model = model_info["is_dl_model"]
-            model_type = model_info["type"]
 
-            model_params = {}
-            vectorizer_params = {}
             if is_dl_model:
-                if model_type == MLModelType.distilbert:
-                    pipe = pipeline(
-                        "text-classification",
-                        model=saved_model_path,
-                        tokenizer=model_info["tokenizer"]
-                    )
-                    model_params = pipe.model.config.to_dict()
-                    vectorizer_params = pipe.tokenizer.init_kwargs
-            else:
-                with open(saved_model_path, "rb") as f:
-                    pipe = cloudpickle.load(f)
-
-                model_params = serialize_params(
-                    pipe.named_steps["classifier"].get_params()
+                pipe, model_params, vectorizer_params = get_dl_model(
+                    saved_model_path,
+                    model_info["tokenizer"]
                 )
-                vectorizer_params = serialize_params(
-                    pipe.named_steps["vectorizer"].get_params()
+            else:
+                pipe, model_params, vectorizer_params = get_ml_model(
+                    saved_model_path
                 )
 
             db_model = await self.models_repo.get_model_by_name(model_name)
@@ -347,7 +332,7 @@ class TrainerService:
                 db_model_uuid = await self.models_repo.create_model(
                     MLModelCreateSchema(
                         name=model_name,
-                        type=model_type,
+                        type=model_info["type"],
                         is_dl_model=is_dl_model,
                         is_trained=True,
                         is_loaded=True,

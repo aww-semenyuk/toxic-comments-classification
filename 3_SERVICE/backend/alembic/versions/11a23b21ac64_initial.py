@@ -31,7 +31,7 @@ def upgrade() -> None:
     op.create_table('models',
     sa.Column('uuid', sa.Uuid(), server_default=sa.text('gen_random_uuid()'), nullable=False),
     sa.Column('name', sa.String(), nullable=False),
-    sa.Column('type', sa.Enum('logistic_regression', 'multinomial_nb', 'linear_svc', 'distilbert', name='mlmodeltype'), nullable=False),
+    sa.Column('type', sa.Enum('logistic_regression', 'multinomial_nb', 'linear_svc', 'distilbert', 'deberta', name='mlmodeltype'), nullable=False),
     sa.Column('is_dl_model', sa.Boolean(), nullable=False),
     sa.Column('is_trained', sa.Boolean(), nullable=False),
     sa.Column('is_loaded', sa.Boolean(), nullable=False),

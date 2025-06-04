@@ -21,7 +21,13 @@ DEFAULT_MODELS_INFO = {
         "filename": "distilbert",
         "is_dl_model": True,
         "tokenizer": "distilbert-base-uncased"
-    }
+    },
+    "default_deberta_v3": {
+        "type": MLModelType.deberta,
+        "filename": "deberta_v3",
+        "is_dl_model": True,
+        "tokenizer": "microsoft/deberta-v3-base"
+    },
 }
 
 loaded_models = {}

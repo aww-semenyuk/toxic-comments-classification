@@ -22,9 +22,10 @@ services:
 
   backend:
     platform: linux/amd64
-    build:
-      context: ../backend/
-      dockerfile: Dockerfile
+    image: levkh/toxic-comments-backend:latest
+#    build:
+#      context: ../backend/
+#      dockerfile: Dockerfile
     container_name: backend
     restart: always
     entrypoint: >
@@ -47,16 +48,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 20s
+      start_period: 30s
     depends_on:
       postgres_db:
         condition: service_healthy
 
   frontend:
     platform: linux/amd64
-    build:
-      context: ../frontend/
-      dockerfile: Dockerfile
+    image: levkh/toxic-comments-frontend:latest
+#    build:
+#      context: ../frontend/
+#      dockerfile: Dockerfile
     container_name: frontend
     restart: always
     ports:

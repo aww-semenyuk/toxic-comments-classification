@@ -21,6 +21,11 @@ manage_page = st.Page(
     title="Manage models",
     icon=":material/settings:"
 )
+models_info_page = st.Page(
+    'app_pages/models_info.py',
+    title="Models info",
+    icon=":material/info:"
+)
 bg_page = st.Page(
     'app_pages/bg_tasks.py',
     title="Monitor tasks",
@@ -46,6 +51,7 @@ pg = st.navigation({
     'Home': [home_page],
     'Models': [
         manage_page,
+        models_info_page,
         train_page,
         predict_ml_page,
         predict_dl_page,

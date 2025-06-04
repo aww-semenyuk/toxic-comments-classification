@@ -6,6 +6,7 @@ import pandas as pd
 
 import spacy
 import nltk
+from sklearn import pipeline as sk_pipeline
 
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import Pipeline
@@ -13,8 +14,10 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.svm import LinearSVC
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from transformers import pipeline as tf_pipeline
 
 from serializers import MLModelType, VectorizerType, MLModelConfig
+from serializers.utils.trainer import serialize_params
 from settings import MODELS_DIR
 
 AVAILABLE_ESTIMATORS = {
@@ -147,22 +150,48 @@ def train_and_save_model_task(
 
 
 def get_dl_model_predictions(
-    model_type: MLModelType,
     model,
     texts: list[str],
     return_scores: bool = False
 ) -> list[int]:
     predictions = []
-    if model_type == MLModelType.distilbert:
-        if return_scores:
-            results = model(texts, top_k=2)
-            for result in results:
-                for pred in result:
-                    if pred["label"] == "LABEL_1":
-                        predictions.append(pred["score"])
-        else:
-            results = model(texts)
-            for result in results:
-                predictions.append(1 if result["label"] == "LABEL_1" else 0)
+    if return_scores:
+        results = model(texts, top_k=2)
+        for result in results:
+            for pred in result:
+                if pred["label"] == "LABEL_1":
+                    predictions.append(pred["score"])
+    else:
+        results = model(texts)
+        for result in results:
+            predictions.append(1 if result["label"] == "LABEL_1" else 0)
 
     return predictions
+
+
+def get_dl_model(
+    saved_model_path: str,
+    tokenizer_name: str
+) -> tuple[tf_pipeline, dict, dict]:
+    pipe = tf_pipeline(
+        "text-classification",
+        model=saved_model_path,
+        tokenizer=tokenizer_name
+    )
+    model_params = serialize_params(pipe.model.config.to_dict())
+    vectorizer_params = serialize_params(pipe.tokenizer.init_kwargs)
+    return pipe, model_params, vectorizer_params
+
+
+def get_ml_model(saved_model_path: str) -> tuple[sk_pipeline, dict, dict]:
+    with open(saved_model_path, "rb") as f:
+        pipe = cloudpickle.load(f)
+
+    model_params = serialize_params(
+        pipe.named_steps["classifier"].get_params()
+    )
+    vectorizer_params = serialize_params(
+        pipe.named_steps["vectorizer"].get_params()
+    )
+
+    return pipe, model_params, vectorizer_params
