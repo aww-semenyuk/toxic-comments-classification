@@ -68,29 +68,6 @@ class ModelsRepository:
             await session.flush()
             return db_model.uuid
 
-    async def create_models(
-        self,
-        models: list[MLModelCreateSchema]
-    ) -> list[UUID]:
-        db_models = [
-            Model(
-                name=model.name,
-                type=model.type,
-                is_dl_model=model.is_dl_model,
-                is_trained=model.is_trained,
-                is_loaded=model.is_loaded,
-                model_params=model.model_params,
-                vectorizer_params=model.vectorizer_params,
-                saved_model_file_path=str(model.saved_model_file_path)
-            )
-            for model in models
-        ]
-        async with self.db_session as session:
-            session.add_all(db_models)
-            await session.commit()
-            await session.flush()
-            return [db_model.uuid for db_model in db_models]
-
     async def delete_model(self, model_name: str) -> None:
         async with self.db_session as session:
             await session.execute(
