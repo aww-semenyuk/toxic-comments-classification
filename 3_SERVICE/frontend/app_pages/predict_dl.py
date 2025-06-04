@@ -11,7 +11,7 @@ handler = RequestHandler(logger)
 
 st.subheader("Predict toxicity with Deep Learning")
 
-models_resp = handler.get_models(is_dl=True)
+models_resp = handler.get_models()
 
 if models_resp["is_success"]:
     tmp_df = pd.DataFrame(models_resp["response"].json())
@@ -23,15 +23,41 @@ else:
     st.error(models_resp["response"].json()["detail"])
 
 if "df_models" in locals():
-    selected_model = st.selectbox(r"$\text{Select a model}$",
-                                  df_models["name"].unique())
-    text_X = st.text_area(
-        r"$\text{Enter new line separated texts to predict toxicity for}$")
-    text_X = escape_quotes(text_X)
-    X = text_X.split('\n')
+    selected_model = st.selectbox(
+        r"$\text{Select a model}$",
+        df_models["id"].unique()
+    )
+
+    # Инициализация session_state
+    if 'text_areas' not in st.session_state:
+        st.session_state.text_areas = [""]
+
+    # Отображение текстовых полей
+    texts = []
+    for i, text in enumerate(st.session_state.text_areas):
+        new_text = st.text_area(
+            f"Text {i+1}",
+            placeholder="Enter new line separated texts to predict toxicity for",
+            value=text,
+            key=f"text_area_{i}"
+        )
+        texts.append(new_text)
+
+    # Обработка добавления нового поля
+    if st.button("Add new textarea"):
+        st.session_state.text_areas.append("")
+        st.rerun()
+
+    # Обновление session_state после всех изменений
+    st.session_state.text_areas = texts
+
+    X = [escape_quotes(t) for t in texts if t.strip() != ""]
+
     pressed_predict = st.button("Obtain predictions")
     if pressed_predict:
-        if not df_models[df_models["name"] == selected_model]["is_loaded"] \
+        logger.info(f"Texts added {texts}")
+        logger.info(f"st.session_state.text_areas {st.session_state.text_areas}")
+        if not df_models[df_models["id"] == selected_model]["is_loaded"] \
                 .values[0]:
             st.error("""The model is unloaded, \
                      load the model first and try again""")
