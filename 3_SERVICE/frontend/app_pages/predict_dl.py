@@ -37,7 +37,7 @@ if "df_models" in locals():
     for i, text in enumerate(st.session_state.text_areas):
         new_text = st.text_area(
             f"Text {i+1}",
-            placeholder="Enter new line separated texts to predict toxicity for",
+            placeholder="Enter texts to predict toxicity for",
             value=text,
             key=f"text_area_{i}"
         )
