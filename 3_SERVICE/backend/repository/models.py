@@ -12,17 +12,13 @@ class ModelsRepository:
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
 
-    async def get_models(self, is_dl: bool = False) -> list[Model]:
+    async def get_models(self, is_dl: bool | None = None) -> list[Model]:
         async with self.db_session as session:
-            models: list[Model] = list((
-                await session.execute(
-                    select(
-                        Model
-                    ).where(
-                        Model.is_dl_model == is_dl
-                    )
-                )
-            ).scalars().all())
+            stmt = select(Model)
+            if is_dl is not None:
+                stmt = stmt.where(Model.is_dl_model == is_dl)
+            result = await session.execute(stmt)
+            models = list(result.scalars().all())
         return models
 
     async def get_model_by_name(self, model_name: str) -> Model | None:

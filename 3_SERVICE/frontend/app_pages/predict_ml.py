@@ -9,9 +9,9 @@ logger = get_logger()
 
 handler = RequestHandler(logger)
 
-st.subheader("Predict toxicity")
+st.subheader("Predict toxicity with Machine Learning")
 
-models_resp = handler.get_models()
+models_resp = handler.get_models(is_dl=False)
 
 if models_resp["is_success"]:
     tmp_df = pd.DataFrame(models_resp["response"].json())

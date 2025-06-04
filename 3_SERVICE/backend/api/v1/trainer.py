@@ -53,7 +53,7 @@ router = APIRouter()
 )
 async def get_models(
     trainer_service: Annotated[TrainerService, Depends(get_trainer_service)],
-    is_dl: Annotated[bool, Param()] = False
+    is_dl: Annotated[bool | None, Param()] = None
 ):
     """Endpoint to get a list of models."""
     return await trainer_service.get_models(is_dl=is_dl)

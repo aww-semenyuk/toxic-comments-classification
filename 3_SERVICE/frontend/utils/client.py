@@ -5,9 +5,11 @@ import asyncio
 
 
 class RequestHandler:
-    BASE_URL = os.environ.get("BACKEND_URL",
-                              "http://localhost:8000") + "/api/v1"
-    TIMEOUT = 50
+    BASE_URL = os.environ.get(
+        "BACKEND_URL",
+        "http://localhost:8000"
+    ) + "/api/v1"
+    TIMEOUT = 600
 
     def __init__(self, logger):
         self.logger = logger
@@ -44,10 +46,15 @@ class RequestHandler:
                 )
                 return {"is_success": False, "response": e.response}
 
-    def get_models(self, is_dl: bool = False):
+    def get_models(self, is_dl: bool | None = None):
         endpoint = "/models/"
+
+        params = None
+        if is_dl is not None:
+            params = {"is_dl": is_dl}
+
         return asyncio.run(
-            self.fetch_one("GET", endpoint=endpoint, params={"is_dl": is_dl}))
+            self.fetch_one("GET", endpoint=endpoint, params=params))
 
     def load_model(self, model_name):
         endpoint = "/models/load"

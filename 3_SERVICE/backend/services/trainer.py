@@ -216,7 +216,7 @@ class TrainerService:
 
     async def get_models(
         self,
-        is_dl: bool = False
+        is_dl: bool | None = None
     ) -> list[MLModelInListResponse]:
         """Get a list of models."""
         response_list = []

@@ -26,9 +26,9 @@ bg_page = st.Page(
     title="Monitor tasks",
     icon=":material/monitoring:"
 )
-predict_page = st.Page(
-    'app_pages/predict.py',
-    title="Predict",
+predict_ml_page = st.Page(
+    'app_pages/predict_ml.py',
+    title="Predict with ML",
     icon=":material/network_node:"
 )
 predict_dl_page = st.Page(
@@ -47,7 +47,7 @@ pg = st.navigation({
     'Models': [
         manage_page,
         train_page,
-        predict_page,
+        predict_ml_page,
         predict_dl_page,
         scores_page
     ],
