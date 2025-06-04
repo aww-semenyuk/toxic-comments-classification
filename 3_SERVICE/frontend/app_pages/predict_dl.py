@@ -11,7 +11,7 @@ handler = RequestHandler(logger)
 
 st.subheader("Predict toxicity with Deep Learning")
 
-models_resp = handler.get_models()
+models_resp = handler.get_models(is_dl=True)
 
 if models_resp["is_success"]:
     tmp_df = pd.DataFrame(models_resp["response"].json())
@@ -25,7 +25,7 @@ else:
 if "df_models" in locals():
     selected_model = st.selectbox(
         r"$\text{Select a model}$",
-        df_models["id"].unique()
+        df_models["name"].unique()
     )
 
     # Инициализация session_state
@@ -56,8 +56,10 @@ if "df_models" in locals():
     pressed_predict = st.button("Obtain predictions")
     if pressed_predict:
         logger.info(f"Texts added {texts}")
-        logger.info(f"st.session_state.text_areas {st.session_state.text_areas}")
-        if not df_models[df_models["id"] == selected_model]["is_loaded"] \
+        logger.info(
+            f"st.session_state.text_areas {st.session_state.text_areas}"
+        )
+        if not df_models[df_models["name"] == selected_model]["is_loaded"] \
                 .values[0]:
             st.error("""The model is unloaded, \
                      load the model first and try again""")

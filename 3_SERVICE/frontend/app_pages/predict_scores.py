@@ -83,7 +83,9 @@ if "df_models" in locals():
                     model_data = pd.DataFrame({
                         "False Positive Rate": fpr,
                         "True Positive Rate": tpr,
-                        "Model": [f"{model_name} (AUC={auc_score:.2f})"] * len(fpr)
+                        "Model": [
+                            f"{model_name} (AUC={auc_score:.2f})"
+                        ] * len(fpr)
                     })
                     all_data.append(model_data)
 
