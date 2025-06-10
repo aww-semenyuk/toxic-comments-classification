@@ -1,19 +1,46 @@
 version: '3'
 
 services:
+  postgres_db:
+    image: postgres:17.5-alpine
+    restart: always
+    container_name: toxic-postgres-db
+    volumes:
+      - pg_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-q", "-d", "$POSTGRES_DB", "-U", "$POSTGRES_USER" ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
   backend:
     platform: linux/amd64
-    build:
-      context: ../backend/
-      dockerfile: Dockerfile
+    image: levkh/toxic-comments-backend:latest
+#    build:
+#      context: ../backend/
+#      dockerfile: Dockerfile
     container_name: backend
     restart: always
+    entrypoint: >
+      bash -c "echo 'применение миграций для БД...'
+      && alembic upgrade head
+      && echo 'запуск сервера...'
+      && python main.py"
     volumes:
       - ../backend/:/app
       - models_volume:/app/models
       - logs_volume:/app/logs
     env_file:
       - ./.env
+    environment:
+      - POSTGRES_HOST=toxic-postgres-db
     ports:
       - "8000:8000"
     healthcheck:
@@ -21,13 +48,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 30s
+    depends_on:
+      postgres_db:
+        condition: service_healthy
 
   frontend:
     platform: linux/amd64
-    build:
-      context: ../frontend/
-      dockerfile: Dockerfile
+    image: levkh/toxic-comments-frontend:latest
+#    build:
+#      context: ../frontend/
+#      dockerfile: Dockerfile
     container_name: frontend
     restart: always
     ports:
@@ -42,5 +73,6 @@ services:
         condition: service_healthy
 
 volumes:
+  pg_data:
   models_volume:
   logs_volume:

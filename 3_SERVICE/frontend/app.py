@@ -21,14 +21,24 @@ manage_page = st.Page(
     title="Manage models",
     icon=":material/settings:"
 )
+models_info_page = st.Page(
+    'app_pages/models_info.py',
+    title="Models info",
+    icon=":material/info:"
+)
 bg_page = st.Page(
     'app_pages/bg_tasks.py',
     title="Monitor tasks",
     icon=":material/monitoring:"
 )
-predict_page = st.Page(
-    'app_pages/predict.py',
-    title="Predict",
+predict_ml_page = st.Page(
+    'app_pages/predict_ml.py',
+    title="Predict with ML",
+    icon=":material/network_node:"
+)
+predict_dl_page = st.Page(
+    'app_pages/predict_dl.py',
+    title="Predict with DL",
     icon=":material/network_node:"
 )
 scores_page = st.Page(
@@ -39,7 +49,14 @@ scores_page = st.Page(
 
 pg = st.navigation({
     'Home': [home_page],
-    'Models': [manage_page, train_page, predict_page, scores_page],
+    'Models': [
+        manage_page,
+        models_info_page,
+        train_page,
+        predict_ml_page,
+        predict_dl_page,
+        scores_page
+    ],
     'Analytics': [eda_page],
     'Tools': [bg_page]
 }, expanded=True)

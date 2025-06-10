@@ -31,7 +31,7 @@ if "df_models" in locals():
         else:
             st.error(f'{remove_all_resp["response"].json()["detail"]}')
 
-    col_names = ['Model ID', 'Model type', 'LOAD/UNLOAD', 'DELETE']
+    col_names = ['Model name', 'Model type', 'LOAD/UNLOAD', 'DELETE']
     col_widths = [0.36, 0.3, 0.17, 0.17]
     cols = dict(zip(col_names, st.columns(col_widths)))
 
@@ -40,39 +40,39 @@ if "df_models" in locals():
 
     for _, row in df_models.iterrows():
         cols = dict(zip(col_names, st.columns(col_widths)))
-        cols['Model ID'].write(row['id'])
+        cols['Model name'].write(row['name'])
         cols['Model type'].write(row['type'])
 
         if row['is_loaded']:
             unload_button = cols['LOAD/UNLOAD'].button(
                 'Unload',
-                key=f"button_unload_{row['id']}",
+                key=f"button_unload_{row['name']}",
                 use_container_width=True)
             if unload_button:
-                unload_resp = handler.unload_model(row["id"])
+                unload_resp = handler.unload_model(row["name"])
                 if unload_resp["is_success"]:
-                    st.success(f'Model {row["id"]} unloaded')
+                    st.success(f'Model {row["name"]} unloaded')
                 else:
                     st.error(f'{unload_resp["response"].json()["detail"]}')
         else:
             load_button = cols['LOAD/UNLOAD'].button(
                 'Load',
-                key=f"button_load_{row['id']}",
+                key=f"button_load_{row['name']}",
                 use_container_width=True)
             if load_button:
-                load_resp = handler.load_model(row["id"])
+                load_resp = handler.load_model(row["name"])
                 if load_resp["is_success"]:
-                    st.success(f'Model {row["id"]} loaded')
+                    st.success(f'Model {row["name"]} loaded')
                 else:
                     st.error(f'{load_resp["response"].json()["detail"]}')
 
         delete_button = cols['DELETE'].button(
             'Delete',
-            key=f"button_delete_{row['id']}",
+            key=f"button_delete_{row['name']}",
             use_container_width=True)
         if delete_button:
-            delete_resp = handler.remove_model(row["id"])
+            delete_resp = handler.remove_model(row["name"])
             if delete_resp["is_success"]:
-                st.success(f'Model {row["id"]} deleted')
+                st.success(f'Model {row["name"]} deleted')
             else:
                 st.error(f'{delete_resp["response"].json()["detail"]}')

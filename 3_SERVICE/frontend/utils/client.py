@@ -5,9 +5,11 @@ import asyncio
 
 
 class RequestHandler:
-    BASE_URL = os.environ.get("BACKEND_URL",
-                              "http://localhost:8000") + "/api/v1"
-    TIMEOUT = 50
+    BASE_URL = os.environ.get(
+        "BACKEND_URL",
+        "http://localhost:8000"
+    ) + "/api/v1"
+    TIMEOUT = 600
 
     def __init__(self, logger):
         self.logger = logger
@@ -44,25 +46,30 @@ class RequestHandler:
                 )
                 return {"is_success": False, "response": e.response}
 
-    def get_models(self):
+    def get_models(self, is_dl: bool | None = None):
         endpoint = "/models/"
-        return asyncio.run(
-            self.fetch_one("GET", endpoint=endpoint))
 
-    def load_model(self, model_id):
+        params = None
+        if is_dl is not None:
+            params = {"is_dl": is_dl}
+
+        return asyncio.run(
+            self.fetch_one("GET", endpoint=endpoint, params=params))
+
+    def load_model(self, model_name):
         endpoint = "/models/load"
-        data = {"id": model_id}
+        data = {"name": model_name}
         return asyncio.run(
             self.fetch_one("POST", endpoint=endpoint, json=data))
 
-    def unload_model(self, model_id):
+    def unload_model(self, model_name):
         endpoint = "/models/unload"
-        data = {"id": model_id}
+        data = {"name": model_name}
         return asyncio.run(
             self.fetch_one("POST", endpoint=endpoint, json=data))
 
-    def predict(self, model_id, X):
-        endpoint = f"/models/predict/{model_id}"
+    def predict(self, model_name, X):
+        endpoint = f"/models/predict/{model_name}"
         data = {"X": X}
         return asyncio.run(
             self.fetch_one("POST", endpoint=endpoint, json=data))
@@ -70,7 +77,7 @@ class RequestHandler:
     def train_model(
             self,
             data: bytes,
-            model_id: str,
+            model_name: str,
             model_type: str,
             model_params: dict,
             vectorizer_type: str,
@@ -80,7 +87,7 @@ class RequestHandler:
         endpoint = "/models/fit"
         files = {"fit_file": ("archive.zip", data, "application/zip")}
         data = {
-            "id": model_id,
+            "name": model_name,
             "vectorizer_type": vectorizer_type,
             "vectorizer_params": json.dumps(vectorizer_params),
             "ml_model_type": model_type,
@@ -90,17 +97,17 @@ class RequestHandler:
         return asyncio.run(
             self.fetch_one("POST", endpoint=endpoint, files=files, data=data))
 
-    def predict_scores(self, ids, zipped_csv):
+    def predict_scores(self, names, zipped_csv):
         endpoint = "/models/predict_scores/"
         files = {
             "predict_file": ("archive.zip", zipped_csv, "application/zip")
         }
-        data = {"ids": ','.join(ids)}
+        data = {"names": ','.join(names)}
         return asyncio.run(
             self.fetch_one("POST", endpoint=endpoint, files=files, data=data))
 
-    def remove_model(self, id):
-        endpoint = f"/models/remove/{id}"
+    def remove_model(self, model_name):
+        endpoint = f"/models/remove/{model_name}"
         return asyncio.run(
             self.fetch_one("DELETE", endpoint=endpoint))
 

@@ -3,15 +3,15 @@ from typing import Annotated
 from fastapi import Depends, APIRouter
 
 from dependency import get_bg_tasks_service
-from serializers.background_tasks import BGTask
-from services.background_tasks import BGTasksService
+from serializers import BGTaskSchema
+from services import BGTasksService
 
 router = APIRouter()
 
 
 @router.get(
     "/",
-    response_model=list[BGTask],
+    response_model=list[BGTaskSchema],
     description="Получение списка задач"
 )
 async def get_tasks(
