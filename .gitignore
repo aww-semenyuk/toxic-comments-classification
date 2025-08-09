@@ -173,3 +173,4 @@ cython_debug/
 .ipynb_checkpoints
 catboost_info/
 .DS_Store
+*.csv
